@@ -32,25 +32,18 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
 
-      - name: Stamp version into package.json
+      - name: Stamp version
         shell: pwsh
         run: |
           $v    = "${{ steps.ver.outputs.VERSION }}"
           $json = Get-Content "package.json" -Raw | ConvertFrom-Json
           $json.version = $v
           $json | ConvertTo-Json -Depth 10 | Set-Content "package.json" -Encoding UTF8
-          Write-Host "Version stamped: $v"
-
-      - name: Stamp version into index.html
-        shell: pwsh
-        run: |
-          $v    = "${{ steps.ver.outputs.VERSION }}"
           $html = Get-Content "renderer/src/index.html" -Raw -Encoding UTF8
           $html = $html -replace '1\.0\.0', $v
           [System.IO.File]::WriteAllText("renderer/src/index.html", $html, [System.Text.Encoding]::UTF8)
-          Write-Host "Stamped $v into index.html"
+          Write-Host "Stamped version $v"
 
       - name: Install dependencies
         run: npm install
@@ -64,9 +57,8 @@ jobs:
         id: find
         shell: pwsh
         run: |
-          $exe = Get-ChildItem -Path "dist" -Filter "*.exe" | Select-Object -First 1
+          $exe = Get-ChildItem -Path "dist" -Filter "*.exe" -Recurse | Where-Object { $_.Name -notlike "*unpacked*" } | Select-Object -First 1
           echo "EXE=$($exe.FullName)" >> $env:GITHUB_OUTPUT
-          echo "EXENAME=$($exe.Name)" >> $env:GITHUB_OUTPUT
           Write-Host "Found: $($exe.Name)"
 
       - name: Create GitHub Release
@@ -78,26 +70,7 @@ jobs:
           prerelease: false
           files: ${{ steps.find.outputs.EXE }}
           body: |
-            ## ValCrown ${{ steps.ver.outputs.TAG }}
-
-            **Publisher:** XOGAMESLTD  
-            **Commit:** ${{ steps.ver.outputs.SHORT }}  
-            **Built with:** Electron + Node.js
-
-            ### Installation
-            1. Download the `.exe` below
-            2. Run as Administrator
-            3. Sign in at valcrown.com
-
-            ### What's included
-            - Real-time CPU/RAM/Ping monitoring
-            - Auto game detection (200+ games)
-            - Boost Engine (Safe + Aggressive mode)
-            - Anti-cheat detection (EAC, BattlEye, Vanguard)
-            - Network optimizer (TCP + DNS)
-            - RAM cleaner
-            - AI Advisor (Claude Sonnet)
-            - Session history
-            - Startup on boot
+            ValCrown ${{ steps.ver.outputs.TAG }} — Publisher: XOGAMESLTD
+            Commit: ${{ steps.ver.outputs.SHORT }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
