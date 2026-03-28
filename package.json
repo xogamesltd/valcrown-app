@@ -1,0 +1,49 @@
+{
+  "name": "valcrown",
+  "version": "1.0.0",
+  "description": "ValCrown — Cloud Gaming Optimizer",
+  "main": "electron/main.js",
+  "author": {
+    "name": "XOGAMESLTD",
+    "email": "buisnessxogamesltd@gmail.com",
+    "url": "https://valcrown.com"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build:win": "electron-builder --win"
+  },
+  "dependencies": {
+    "electron-store": "^8.1.0"
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.xogamesltd.valcrown",
+    "productName": "ValCrown",
+    "copyright": "Copyright © 2026 XOGAMESLTD",
+    "files": [
+      "electron/**/*",
+      "renderer/**/*",
+      "core/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [{ "target": "nsis", "arch": ["x64"] }],
+      "icon": "renderer/src/icon.ico",
+      "requestedExecutionLevel": "requireAdministrator"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ValCrown",
+      "installerHeaderImage": "renderer/src/banner.bmp",
+      "include": "installer/installer.nsh",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}

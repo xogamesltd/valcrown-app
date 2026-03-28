@@ -1,0 +1,103 @@
+name: Build ValCrown Electron
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate version
+        id: ver
+        shell: pwsh
+        run: |
+          $commits = git rev-list --count HEAD
+          $short   = git rev-parse --short HEAD
+          $version = "1.0.$commits"
+          $tag     = "v$version"
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+          echo "TAG=$tag"         >> $env:GITHUB_OUTPUT
+          echo "SHORT=$short"     >> $env:GITHUB_OUTPUT
+          Write-Host "Version: $version | Tag: $tag"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Stamp version into package.json
+        shell: pwsh
+        run: |
+          $v    = "${{ steps.ver.outputs.VERSION }}"
+          $json = Get-Content "package.json" -Raw | ConvertFrom-Json
+          $json.version = $v
+          $json | ConvertTo-Json -Depth 10 | Set-Content "package.json" -Encoding UTF8
+          Write-Host "Version stamped: $v"
+
+      - name: Stamp version into index.html
+        shell: pwsh
+        run: |
+          $v    = "${{ steps.ver.outputs.VERSION }}"
+          $html = Get-Content "renderer/src/index.html" -Raw -Encoding UTF8
+          $html = $html -replace '1\.0\.0', $v
+          [System.IO.File]::WriteAllText("renderer/src/index.html", $html, [System.Text.Encoding]::UTF8)
+          Write-Host "Stamped $v into index.html"
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Windows installer
+        run: npm run build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Find installer
+        id: find
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path "dist" -Filter "*.exe" | Select-Object -First 1
+          echo "EXE=$($exe.FullName)" >> $env:GITHUB_OUTPUT
+          echo "EXENAME=$($exe.Name)" >> $env:GITHUB_OUTPUT
+          Write-Host "Found: $($exe.Name)"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ver.outputs.TAG }}
+          name: ValCrown ${{ steps.ver.outputs.TAG }}
+          draft: false
+          prerelease: false
+          files: ${{ steps.find.outputs.EXE }}
+          body: |
+            ## ValCrown ${{ steps.ver.outputs.TAG }}
+
+            **Publisher:** XOGAMESLTD  
+            **Commit:** ${{ steps.ver.outputs.SHORT }}  
+            **Built with:** Electron + Node.js
+
+            ### Installation
+            1. Download the `.exe` below
+            2. Run as Administrator
+            3. Sign in at valcrown.com
+
+            ### What's included
+            - Real-time CPU/RAM/Ping monitoring
+            - Auto game detection (200+ games)
+            - Boost Engine (Safe + Aggressive mode)
+            - Anti-cheat detection (EAC, BattlEye, Vanguard)
+            - Network optimizer (TCP + DNS)
+            - RAM cleaner
+            - AI Advisor (Claude Sonnet)
+            - Session history
+            - Startup on boot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

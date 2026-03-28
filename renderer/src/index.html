@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>ValCrown</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg0:#080808;--bg1:#101010;--bg2:#181818;--bg3:#222;--bg4:#2a2a2a;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.12);
+  --t1:#f0f0f0;--t2:#888;--t3:#555;
+  --ac:#7c6aff;--ac2:#6254e0;--ac-dim:rgba(124,106,255,0.12);
+  --green:#22d47a;--green-dim:rgba(34,212,122,0.12);
+  --yellow:#f5a623;--yellow-dim:rgba(245,166,35,0.12);
+  --red:#ff4d4d;--red-dim:rgba(255,77,77,0.12);
+  --blue:#4d9fff;--blue-dim:rgba(77,159,255,0.12);
+  --r:10px;--r-sm:7px;--r-lg:14px;
+  --mono:monospace;--sans:-apple-system,sans-serif;
+}
+html,body{height:100vh;overflow:hidden;display:flex;flex-direction:column;font-family:var(--sans);background:var(--bg0);color:var(--t1);font-size:14px;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-thumb{background:var(--bg4);border-radius:2px}
+button{font-family:var(--sans);cursor:pointer;border:none;outline:none}
+input{font-family:var(--sans);outline:none;border:none}
+a{color:var(--ac);text-decoration:none}
+
+/* LAYOUT */
+.layout{display:flex;flex:1}
+
+/* SIDEBAR */
+.sidebar{width:200px;background:var(--bg1);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:12px 8px;flex-shrink:0}
+.nav-section{margin-bottom:16px}
+.nav-label{font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:1.2px;padding:0 8px;margin-bottom:4px}
+.nav-btn{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--r-sm);font-size:13px;font-weight:500;color:var(--t2);background:none;width:100%;text-align:left;transition:all 0.15s;margin-bottom:1px}
+.nav-btn:hover{background:var(--bg3);color:var(--t1)}
+.nav-btn.active{background:var(--ac-dim);color:var(--ac)}
+.nav-btn svg{width:15px;height:15px;flex-shrink:0}
+.nav-bottom{margin-top:auto}
+.user-pill{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r-sm);padding:10px;display:flex;align-items:center;gap:8px}
+.user-av{width:28px;height:28px;background:var(--ac);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.user-nm{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.user-pl{font-size:10px;color:var(--ac);font-weight:600}
+
+/* MAIN */
+.main{flex:1;overflow-y:auto;background:var(--bg0)}
+.page{display:none;padding:20px}
+.page.active{display:block}
+
+/* CARDS */
+.card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r-lg);padding:16px;margin-bottom:12px}
+.card-head{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+
+/* PAGE HEADER */
+.ph{margin-bottom:18px;display:flex;align-items:center;justify-content:space-between}
+.ph-title{font-size:18px;font-weight:800;letter-spacing:-0.5px}
+.ph-sub{font-size:12px;color:var(--t2);margin-top:3px}
+
+/* STATS */
+.stat{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r);padding:14px}
+.stat.ok{border-color:rgba(34,212,122,0.3)}
+.stat.warn{border-color:rgba(245,166,35,0.3)}
+.stat.bad{border-color:rgba(255,77,77,0.3)}
+.stat.info{border-color:rgba(77,159,255,0.3)}
+.stat-val{font-size:22px;font-weight:800;font-family:var(--mono);letter-spacing:-1px}
+.stat-lbl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:0.8px;margin-top:2px}
+.stat-sub{font-size:11px;color:var(--t2);margin-top:4px}
+.meter{height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;margin-top:8px}
+.meter-fill{height:100%;border-radius:3px;transition:width 0.4s ease}
+
+/* BUTTONS */
+.btn{height:34px;padding:0 14px;border-radius:var(--r-sm);font-size:12px;font-weight:600;transition:all 0.15s;display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.btn-primary{background:var(--ac);color:#fff}.btn-primary:hover{background:var(--ac2)}
+.btn-ghost{background:var(--bg3);color:var(--t1);border:1px solid var(--border2)}.btn-ghost:hover{background:var(--bg4)}
+.btn-green{background:var(--green-dim);color:var(--green);border:1px solid rgba(34,212,122,0.2)}.btn-green:hover{background:var(--green);color:#000}
+.btn-red{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,77,77,0.2)}.btn-red:hover{background:var(--red);color:#fff}
+.btn-yellow{background:var(--yellow-dim);color:var(--yellow);border:1px solid rgba(245,166,35,0.2)}.btn-yellow:hover{background:var(--yellow);color:#000}
+.btn-sm{height:28px;padding:0 10px;font-size:11px}
+.btn:disabled{opacity:0.4;cursor:not-allowed}
+
+/* BOOST BTN */
+.boost-btn{width:100%;height:52px;border-radius:var(--r);font-size:14px;font-weight:700;letter-spacing:0.3px;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+.boost-btn.off{background:var(--bg3);color:var(--t1);border:1px solid var(--border2)}.boost-btn.off:hover{background:var(--ac);border-color:var(--ac);color:#fff;transform:translateY(-1px)}
+.boost-btn.on{background:var(--green);color:#000;border:1px solid transparent}.boost-btn.on:hover{opacity:0.85}
+.pulse{width:8px;height:8px;background:currentColor;border-radius:50%;animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+
+/* TAGS */
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px}
+.tag-green{background:var(--green-dim);color:var(--green)}
+.tag-yellow{background:var(--yellow-dim);color:var(--yellow)}
+.tag-red{background:var(--red-dim);color:var(--red)}
+.tag-accent{background:var(--ac-dim);color:var(--ac)}
+.tag-blue{background:var(--blue-dim);color:var(--blue)}
+
+/* PROCESS LIST */
+.proc-item{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--bg2);border-radius:var(--r-sm);margin-bottom:4px;border:1px solid var(--border);transition:border-color 0.15s}
+.proc-item:hover{border-color:var(--border2)}
+.proc-name{font-size:12px;font-weight:600;font-family:var(--mono)}
+.proc-info{font-size:10px;color:var(--t3);margin-top:2px}
+.proc-actions{display:flex;gap:4px;flex-shrink:0}
+
+/* PING */
+.ping-big{font-size:48px;font-weight:800;font-family:var(--mono);line-height:1}
+.ping-unit{font-size:14px;color:var(--t2)}
+.ping-bar{height:4px;background:var(--bg3);border-radius:2px;overflow:hidden;margin:8px 0}
+.ping-fill{height:100%;border-radius:2px;transition:width 0.4s ease}
+.ping-ok{background:var(--green)}.ping-warn{background:var(--yellow)}.ping-bad{background:var(--red)}
+
+/* CHAT */
+.chat-wrap{height:260px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.msg{max-width:82%;padding:9px 13px;border-radius:10px;font-size:13px;line-height:1.5}
+.msg.user{align-self:flex-end;background:var(--ac);color:#fff;border-bottom-right-radius:3px}
+.msg.ai{align-self:flex-start;background:var(--bg3);color:var(--t1);border-bottom-left-radius:3px}
+.chat-row{display:flex;gap:8px}
+.chat-inp{flex:1;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:9px 12px;color:var(--t1);font-size:13px;transition:border-color 0.15s}
+.chat-inp:focus{border-color:var(--ac)}
+.chat-inp::placeholder{color:var(--t3)}
+
+/* ACTIVITY */
+.activity-item{display:flex;gap:10px;padding:6px 0;border-bottom:1px solid var(--border);align-items:baseline}
+.activity-item:last-child{border:none}
+.activity-time{font-size:10px;color:var(--t3);font-family:var(--mono);flex-shrink:0}
+.activity-msg{font-size:12px;color:var(--t2)}
+
+/* SMART BANNER */
+.smart-banner{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:var(--r);border:1px solid;margin-bottom:12px}
+.smart-banner.ok{background:var(--green-dim);border-color:rgba(34,212,122,0.2)}
+.smart-banner.warn{background:var(--yellow-dim);border-color:rgba(245,166,35,0.2)}
+.smart-banner.bad{background:var(--red-dim);border-color:rgba(255,77,77,0.2)}
+.smart-banner.info{background:var(--ac-dim);border-color:rgba(124,106,255,0.2)}
+.banner-icon{font-size:22px;flex-shrink:0}
+.banner-text{flex:1}
+.banner-title{font-size:13px;font-weight:600;margin-bottom:2px}
+.banner-sub{font-size:12px;color:var(--t2);line-height:1.4}
+
+/* GAME CARD */
+.game-card{background:linear-gradient(135deg,rgba(124,106,255,0.15),rgba(34,212,122,0.08));border:1px solid rgba(124,106,255,0.3);border-radius:var(--r-lg);padding:16px;display:none;align-items:center;gap:14px;margin-bottom:12px;position:relative;overflow:hidden}
+.game-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--ac),var(--green));animation:shimmer 2s infinite}
+@keyframes shimmer{0%{opacity:0.5}50%{opacity:1}100%{opacity:0.5}}
+.gc-icon{font-size:36px;flex-shrink:0}
+.gc-name{font-size:18px;font-weight:800}
+.gc-meta{font-size:11px;color:var(--t2);margin-top:3px;display:flex;align-items:center;gap:8px}
+.live-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:pulse 1s infinite;display:inline-block}
+.gc-time{font-size:12px;font-weight:700;color:var(--green);font-family:var(--mono)}
+.no-game-card{background:var(--bg2);border:1px dashed var(--border2);border-radius:var(--r-lg);padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:12px;color:var(--t3);font-size:13px}
+
+/* APP GRID */
+.app-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.app-tile{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:14px 12px;text-align:center;cursor:pointer;transition:all 0.15s}
+.app-tile:hover{border-color:var(--ac);background:var(--ac-dim)}
+.app-tile.selected{border-color:var(--ac);background:var(--ac-dim)}
+.app-tile-icon{font-size:24px;margin-bottom:6px}
+.app-tile-name{font-size:12px;font-weight:600}
+.app-tile-sub{font-size:10px;color:var(--t3);margin-top:2px}
+
+/* TARGET */
+.target-card{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r);padding:14px 16px;display:flex;align-items:center;gap:12px}
+.target-icon{width:40px;height:40px;background:var(--ac);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;color:#fff;flex-shrink:0}
+.target-name{font-size:14px;font-weight:600}
+.target-path{font-size:11px;color:var(--t3);margin-top:2px;font-family:var(--mono)}
+.target-actions{margin-left:auto;display:flex;gap:6px}
+
+/* MISC */
+.div{height:1px;background:var(--border);margin:12px 0}
+.empty{text-align:center;padding:28px;color:var(--t3);font-size:13px}
+.inp{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:10px 12px;color:var(--t1);font-size:13px;transition:border-color 0.15s}
+.inp:focus{border-color:var(--ac)}
+.inp::placeholder{color:var(--t3)}
+.inp-label{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;display:block}
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,0.2);border-top-color:#fff;border-radius:50%;animation:spinning 0.5s linear infinite;display:inline-block}
+@keyframes spinning{to{transform:rotate(360deg)}}
+.drop-zone{border:1.5px dashed var(--border2);border-radius:var(--r-lg);padding:32px 20px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--bg2)}
+.drop-zone:hover{border-color:var(--ac);background:var(--ac-dim)}
+.drop-icon{font-size:32px;margin-bottom:10px}
+.drop-title{font-size:14px;font-weight:600;margin-bottom:4px}
+.drop-sub{font-size:12px;color:var(--t2);line-height:1.5}
+
+/* TOGGLE SWITCH */
+.toggle{position:relative;width:36px;height:20px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--bg4);border-radius:20px;transition:0.3s}
+.toggle-slider:before{position:absolute;content:"";height:14px;width:14px;left:3px;bottom:3px;background:white;border-radius:50%;transition:0.3s}
+input:checked + .toggle-slider{background:var(--ac)}
+input:checked + .toggle-slider:before{transform:translateX(16px)}
+
+/* SETTINGS ROW */
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)}
+.settings-row:last-child{border:none}
+.settings-label{font-size:13px;font-weight:500}
+.settings-sub{font-size:11px;color:var(--t3);margin-top:2px}
+
+/* PROGRESS */
+.progress-bar{height:8px;background:var(--bg3);border-radius:4px;overflow:hidden}
+.progress-fill{height:100%;border-radius:4px;transition:width 0.5s ease;background:var(--ac)}
+
+/* INFO ROWS */
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px}
+.info-row:last-child{border:none}
+.info-key{color:var(--t2)}
+.info-val{font-family:var(--mono);font-size:11px;color:var(--t1)}
+</style>
+</head>
+<body>
+<div class="vc-titlebar" style="height:40px;background:#0e0e1c;display:flex;align-items:center;justify-content:space-between;padding:0 14px;-webkit-app-region:drag;flex-shrink:0;border-bottom:1px solid rgba(255,255,255,0.06)">
+  <div style="display:flex;align-items:center;gap:8px;-webkit-app-region:no-drag">
+    <div style="width:22px;height:22px;background:#7c6aff;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:white">V</div>
+    <span style="font-size:13px;font-weight:700;letter-spacing:0.3px">ValCrown</span>
+    <span style="font-size:9px;color:#7c6aff;background:rgba(124,106,255,0.12);padding:2px 6px;border-radius:4px;font-weight:700">PRO</span>
+  </div>
+  <div style="display:flex;gap:0;-webkit-app-region:no-drag">
+    <button onclick="window.valcrown.minimize()" style="width:46px;height:32px;background:transparent;border:none;color:#9090c0;font-size:14px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">&#x2212;</button>
+    <button onclick="window.valcrown.maximize()" style="width:46px;height:32px;background:transparent;border:none;color:#9090c0;font-size:14px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">&#x25A1;</button>
+    <button onclick="window.valcrown.close()" style="width:46px;height:32px;background:transparent;border:none;color:#9090c0;font-size:14px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='#e81123';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#9090c0'">&#x2715;</button>
+  </div>
+</div>
+<div class="layout" style="height:calc(100vh - 40px)">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="nav-section">
+      <div class="nav-label">Overview</div>
+      <button class="nav-btn active" onclick="go('dashboard')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </button>
+      <button class="nav-btn" onclick="go('sessions-pg')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 6v6l4 2"/></svg>
+        Sessions
+      </button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Optimize</div>
+      <button class="nav-btn" onclick="go('target')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+        Target App
+      </button>
+      <button class="nav-btn" onclick="go('boost')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+        Boost Engine
+      </button>
+      <button class="nav-btn" onclick="go('processes');loadProcs()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        Processes
+      </button>
+      <button class="nav-btn" onclick="go('network')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/></svg>
+        Network
+      </button>
+      <button class="nav-btn" onclick="go('system')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="2" x2="9" y2="4"/><line x1="15" y1="2" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="22"/><line x1="15" y1="20" x2="15" y2="22"/><line x1="20" y1="9" x2="22" y2="9"/><line x1="20" y1="14" x2="22" y2="14"/><line x1="2" y1="9" x2="4" y2="9"/><line x1="2" y1="14" x2="4" y2="14"/></svg>
+        System
+      </button>
+    </div>
+    <div class="nav-section">
+      <div class="nav-label">Tools</div>
+      <button class="nav-btn" onclick="go('ai')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        AI Advisor
+      </button>
+      <button class="nav-btn" onclick="go('settings')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+        Settings
+      </button>
+    </div>
+    <div class="nav-bottom">
+      <div class="user-pill">
+        <div class="user-av" id="user-av">?</div>
+        <div style="min-width:0">
+          <div class="user-nm" id="user-nm">Loading...</div>
+          <div class="user-pl" id="user-pl">Pro</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+
+    <!-- DASHBOARD -->
+    <div id="pg-dashboard" class="page active">
+      <div class="ph">
+        <div class="ph-left">
+          <div class="ph-title">Dashboard</div>
+          <div class="ph-sub">Real-time system monitoring</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <span id="anticheat-badge" class="tag tag-green" style="display:none">✓ Anti-Cheat Safe</span>
+          <button class="btn btn-ghost btn-sm" onclick="runSmartAnalysis()">⚡ Analyze</button>
+        </div>
+      </div>
+
+      <div id="smart-banner"></div>
+
+      <!-- Game Detection -->
+      <div class="game-card" id="game-card">
+        <div class="gc-icon" id="gc-icon">🎮</div>
+        <div style="flex:1">
+          <div style="font-size:10px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px"><span class="live-dot"></span>&nbsp;ValCrown is boosting</div>
+          <div class="gc-name" id="gc-name">Game Name</div>
+          <div class="gc-meta">
+            <span id="gc-genre">Gaming</span>·
+            <span class="gc-time" id="session-time">0m 0s</span>·
+            <span id="gc-status">Boosting</span>
+          </div>
+        </div>
+        <button class="btn btn-red btn-sm" onclick="toggleBoost()">Stop Boost</button>
+      </div>
+      <div class="no-game-card" id="no-game-card">
+        <span style="font-size:20px">🎮</span>
+        <span>No game detected — ValCrown monitors 200+ games automatically</span>
+      </div>
+
+      <!-- Stats -->
+      <div class="g4" style="margin-bottom:12px">
+        <div class="stat" id="st-cpu"><div class="stat-val" id="v-cpu">--</div><div class="stat-lbl">CPU %</div><div class="meter"><div class="meter-fill" id="m-cpu" style="width:0%;background:var(--green)"></div></div></div>
+        <div class="stat" id="st-ram"><div class="stat-val" id="v-ram">--</div><div class="stat-lbl">RAM %</div><div class="meter"><div class="meter-fill" id="m-ram" style="width:0%;background:var(--green)"></div></div></div>
+        <div class="stat info" id="st-ping"><div class="stat-val" id="v-ping">--</div><div class="stat-lbl">Ping ms</div><div class="meter"><div class="meter-fill" id="m-ping" style="width:0%;background:var(--blue)"></div></div></div>
+        <div class="stat" id="st-boost"><div class="stat-val" id="v-boost">OFF</div><div class="stat-lbl">Boost</div><div class="stat-sub" id="v-boost-target">No target</div></div>
+      </div>
+
+      <div class="g2" style="margin-bottom:12px">
+        <div class="card">
+          <div class="card-head">Quick Boost</div>
+          <div style="display:flex;gap:6px;margin-bottom:8px">
+            <button class="btn btn-sm" id="mode-safe" onclick="setMode('safe')" style="background:var(--green-dim);color:var(--green);border:1px solid rgba(34,212,122,0.3);flex:1">Safe</button>
+            <button class="btn btn-sm" id="mode-aggressive" onclick="setMode('aggressive')" style="background:var(--bg3);color:var(--t2);border:1px solid var(--border2);flex:1">Aggressive</button>
+          </div>
+          <button class="boost-btn off" id="dash-boost-btn" onclick="toggleBoost()">Activate Boost</button>
+          <div style="margin-top:8px;font-size:11px;color:var(--t3)" id="dash-target-hint">Set a target app for auto-boost</div>
+        </div>
+        <div class="card">
+          <div class="card-head">Quick Actions</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <button class="btn btn-ghost" onclick="doCleanRam()" style="width:100%;height:32px;font-size:12px">🧹 Clean RAM</button>
+            <button class="btn btn-ghost" onclick="doFlushDns()" style="width:100%;height:32px;font-size:12px">🌐 Flush DNS</button>
+            <button class="btn btn-ghost" onclick="doTcpOpt()" style="width:100%;height:32px;font-size:12px">⚡ Optimize TCP</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div class="card-head" style="margin:0">Activity Log</div>
+          <button class="btn btn-ghost btn-sm" onclick="clearLog()">Clear</button>
+        </div>
+        <div id="activity-log" style="max-height:140px;overflow-y:auto"><div class="empty">Activity will appear here</div></div>
+      </div>
+    </div>
+
+    <!-- SESSIONS -->
+    <div id="pg-sessions-pg" class="page">
+      <div class="ph"><div><div class="ph-title">Session History</div><div class="ph-sub">Games boosted by ValCrown</div></div></div>
+      <div class="card">
+        <div class="card-head">Recent Gaming Sessions</div>
+        <div id="session-history"><div class="empty">No sessions yet — start a game!</div></div>
+      </div>
+    </div>
+
+    <!-- TARGET APP -->
+    <div id="pg-target" class="page">
+      <div class="ph"><div><div class="ph-title">Target App</div><div class="ph-sub">Set the app ValCrown should optimize</div></div></div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-head">Manual Target</div>
+        <div id="no-target" class="drop-zone" onclick="pickApp()">
+          <div class="drop-icon">🎯</div>
+          <div class="drop-title">Click to set target app</div>
+          <div class="drop-sub">ValCrown already auto-detects 200+ games<br>Use this to manually target a specific app</div>
+          <br><button class="btn btn-primary" onclick="event.stopPropagation();pickApp()">Set Target App</button>
+        </div>
+        <div id="has-target" style="display:none">
+          <div class="target-card">
+            <div class="target-icon" id="t-icon">?</div>
+            <div><div class="target-name" id="t-name">--</div><div class="target-path" id="t-path">--</div></div>
+            <div class="target-actions">
+              <button class="btn btn-green btn-sm" onclick="toggleBoost()">Boost Now</button>
+              <button class="btn btn-ghost btn-sm" onclick="pickApp()">Change</button>
+              <button class="btn btn-red btn-sm" onclick="clearTarget()">Remove</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head" style="margin-bottom:10px">Popular Cloud Gaming Apps</div>
+        <div class="app-grid" id="app-grid"></div>
+      </div>
+    </div>
+
+    <!-- BOOST ENGINE -->
+    <div id="pg-boost" class="page">
+      <div class="ph"><div><div class="ph-title">Boost Engine</div><div class="ph-sub">System performance optimization</div></div></div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-head">Boost Mode</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button class="btn btn-green btn-sm" id="mode-safe-boost" onclick="setMode('safe')" style="flex:1;height:36px">🛡️ Safe Mode</button>
+          <button class="btn btn-yellow btn-sm" id="mode-aggressive-boost" onclick="setMode('aggressive')" style="flex:1;height:36px">⚡ Aggressive</button>
+        </div>
+        <button class="boost-btn off" id="boost-btn" onclick="toggleBoost()">Activate Boost</button>
+        <div class="g4" style="margin-top:10px;gap:8px">
+          <div style="background:var(--bg2);border-radius:var(--r-sm);padding:10px;border:1px solid var(--border)"><div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px">Priority</div><div style="font-size:13px;font-weight:700" id="b-priority">Normal</div></div>
+          <div style="background:var(--bg2);border-radius:var(--r-sm);padding:10px;border:1px solid var(--border)"><div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px">Power</div><div style="font-size:13px;font-weight:700" id="b-power">Balanced</div></div>
+          <div style="background:var(--bg2);border-radius:var(--r-sm);padding:10px;border:1px solid var(--border)"><div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px">Timer</div><div style="font-size:13px;font-weight:700" id="b-timer">Default</div></div>
+          <div style="background:var(--bg2);border-radius:var(--r-sm);padding:10px;border:1px solid var(--border)"><div style="font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:4px">GameDVR</div><div style="font-size:13px;font-weight:700" id="b-gamedvr">On</div></div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div class="card-head" style="margin:0">Anti-Cheat Status</div>
+          <button class="btn btn-ghost btn-sm" onclick="checkAntiCheat()">Check Now</button>
+        </div>
+        <div id="anticheat-result" style="font-size:13px;color:var(--t2)">Click "Check Now" to scan for anti-cheat software.</div>
+      </div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div class="card-head" style="margin:0">AI Boost Advisor</div>
+          <button class="btn btn-primary btn-sm" onclick="getBoostAdvice()">Analyze</button>
+        </div>
+        <div id="boost-advice" style="font-size:13px;color:var(--t2)">Click "Analyze" for AI-powered boost recommendation.</div>
+      </div>
+    </div>
+
+    <!-- PROCESSES -->
+    <div id="pg-processes" class="page">
+      <div class="ph"><div><div class="ph-title">Process Manager</div><div class="ph-sub">Monitor and control background processes</div></div></div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="card-head" style="margin:0">Running Processes</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="doCleanRam()">🧹 Clean RAM</button>
+            <button class="btn btn-ghost btn-sm" onclick="loadProcs()">↻ Refresh</button>
+            <button class="btn btn-primary btn-sm" onclick="aiCheckAll()">🤖 AI Check All</button>
+          </div>
+        </div>
+        <div id="proc-list"><div class="empty">Click Refresh to load processes</div></div>
+      </div>
+    </div>
+
+    <!-- NETWORK -->
+    <div id="pg-network" class="page">
+      <div class="ph"><div><div class="ph-title">Network Optimizer</div><div class="ph-sub">Monitor and optimize your connection</div></div></div>
+      <div class="g2" style="margin-bottom:12px">
+        <div class="card">
+          <div class="card-head">Live Ping</div>
+          <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:6px">
+            <div class="ping-big" id="n-ping">--</div>
+            <div class="ping-unit">ms</div>
+          </div>
+          <div class="ping-bar"><div id="n-ping-fill" class="ping-fill ping-ok" style="width:0%"></div></div>
+          <div style="display:flex;justify-content:space-between;margin-top:6px">
+            <span style="font-size:11px;color:var(--t3)">Quality</span>
+            <span id="n-ping-q" style="font-size:12px;font-weight:600;color:var(--green)">Measuring...</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head">Quick Actions</div>
+          <div style="display:flex;flex-direction:column;gap:7px">
+            <button class="btn btn-primary" id="dns-btn" onclick="doFlushDns()" style="width:100%;height:36px">🌐 Flush DNS Cache</button>
+            <button class="btn btn-ghost" onclick="doTcpOpt()" style="width:100%;height:36px">⚡ Optimize TCP</button>
+            <button class="btn btn-ghost" onclick="doNetDiag()" style="width:100%;height:36px">🔍 AI Diagnose</button>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-head">DNS Presets</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="setDns('8.8.8.8','8.8.4.4')">Google DNS</button>
+          <button class="btn btn-ghost btn-sm" onclick="setDns('1.1.1.1','1.0.0.1')">Cloudflare DNS</button>
+          <button class="btn btn-ghost btn-sm" onclick="setDns('9.9.9.9','149.112.112.112')">Quad9 DNS</button>
+          <button class="btn btn-ghost btn-sm" onclick="setDns('208.67.222.222','208.67.220.220')">OpenDNS</button>
+        </div>
+      </div>
+      <div class="card"><div class="card-head">AI Network Analysis</div><div id="net-diag" style="font-size:13px;color:var(--t2)">Click "AI Diagnose" above.</div></div>
+    </div>
+
+    <!-- SYSTEM INFO -->
+    <div id="pg-system" class="page">
+      <div class="ph"><div><div class="ph-title">System Info</div><div class="ph-sub">Hardware and OS details</div></div></div>
+      <div class="g2" style="margin-bottom:12px">
+        <div class="card">
+          <div class="card-head">CPU</div>
+          <div id="sys-cpu-name" style="font-size:13px;font-weight:600;margin-bottom:10px">--</div>
+          <div class="info-row"><span class="info-key">Cores</span><span class="info-val" id="sys-cpu-cores">--</span></div>
+          <div class="info-row"><span class="info-key">Usage</span><span class="info-val" id="sys-cpu-usage">--%</span></div>
+        </div>
+        <div class="card">
+          <div class="card-head">GPU</div>
+          <div id="sys-gpu-name" style="font-size:13px;font-weight:600;margin-bottom:10px">--</div>
+          <div class="info-row"><span class="info-key">VRAM</span><span class="info-val" id="sys-gpu-vram">--</span></div>
+          <div class="info-row"><span class="info-key">Vendor</span><span class="info-val" id="sys-gpu-vendor">--</span></div>
+        </div>
+      </div>
+      <div class="g2" style="margin-bottom:12px">
+        <div class="card">
+          <div class="card-head">Memory</div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+            <span style="font-size:13px;font-weight:600" id="sys-ram-used">-- GB</span>
+            <span style="font-size:12px;color:var(--t2)" id="sys-ram-total">of -- GB</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" id="sys-ram-bar" style="width:0%"></div></div>
+          <div style="margin-top:8px"><button class="btn btn-ghost btn-sm" onclick="doCleanRam()">🧹 Clean RAM</button></div>
+        </div>
+        <div class="card">
+          <div class="card-head">Operating System</div>
+          <div class="info-row"><span class="info-key">OS</span><span class="info-val" id="sys-os">--</span></div>
+          <div class="info-row"><span class="info-key">Build</span><span class="info-val" id="sys-build">--</span></div>
+          <div class="info-row"><span class="info-key">.NET</span><span class="info-val" id="sys-dotnet">--</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI ADVISOR -->
+    <div id="pg-ai" class="page">
+      <div class="ph"><div><div class="ph-title">AI Advisor</div><div class="ph-sub">Claude Sonnet powered gaming assistant</div></div></div>
+      <div class="card">
+        <div class="card-head">Ask Anything</div>
+        <div class="chat-wrap" id="chat-box">
+          <div class="msg ai">Hi! I'm ValCrown AI. Ask me anything about optimizing your PC, reducing lag, fixing network issues, or gaming performance.</div>
+        </div>
+        <div class="chat-row">
+          <input class="chat-inp" id="chat-in" placeholder="e.g. Why is my ping high? How do I boost Valorant?" onkeypress="if(event.key==='Enter')sendMsg()"/>
+          <button class="btn btn-primary" onclick="sendMsg()">Send</button>
+        </div>
+      </div>
+      <div class="g3">
+        <button class="btn btn-ghost" onclick="askPreset('How do I reduce ping in cloud gaming?')" style="height:auto;padding:10px;flex-direction:column;gap:4px">
+          <span style="font-size:16px">📡</span><span style="font-size:11px">Reduce Ping</span>
+        </button>
+        <button class="btn btn-ghost" onclick="askPreset('Why is my FPS dropping in games?')" style="height:auto;padding:10px;flex-direction:column;gap:4px">
+          <span style="font-size:16px">📉</span><span style="font-size:11px">Fix FPS Drops</span>
+        </button>
+        <button class="btn btn-ghost" onclick="askPreset('What processes should I kill for better gaming?')" style="height:auto;padding:10px;flex-direction:column;gap:4px">
+          <span style="font-size:16px">💀</span><span style="font-size:11px">Kill Bloat</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div id="pg-settings" class="page">
+      <div class="ph"><div><div class="ph-title">Settings</div><div class="ph-sub">Account and preferences</div></div></div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-head">Account</div>
+        <div class="settings-row">
+          <div><div class="settings-label" id="s-email">--</div><div class="settings-sub" id="s-plan">Pro Plan</div></div>
+          <button class="btn btn-red btn-sm" onclick="doLogout()">Sign Out</button>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-head">Preferences</div>
+        <div class="settings-row">
+          <div><div class="settings-label">Launch on startup</div><div class="settings-sub">Start ValCrown when Windows boots</div></div>
+          <label class="toggle"><input type="checkbox" id="toggle-startup" onchange="toggleStartup(this.checked)"><span class="toggle-slider"></span></label>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">Boost Mode</div><div class="settings-sub">Safe = stable tweaks. Aggressive = maximum performance</div></div>
+          <select id="boost-mode-select" onchange="setMode(this.value)" style="background:var(--bg3);color:var(--t1);border:1px solid var(--border2);border-radius:var(--r-sm);padding:6px 10px;font-size:12px;cursor:pointer">
+            <option value="safe">Safe Mode</option>
+            <option value="aggressive">Aggressive</option>
+          </select>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head">About ValCrown</div>
+        <div class="info-row"><span class="info-key">Version</span><span class="info-val" id="s-version">1.0.0</span></div>
+        <div class="info-row"><span class="info-key">Backend</span><span class="info-val">api.valcrown.com</span></div>
+        <div class="info-row"><span class="info-key">AI Engine</span><span class="info-val">Claude Sonnet</span></div>
+        <div class="info-row"><span class="info-key">Game Database</span><span class="info-val">200+ titles</span></div>
+        <div class="info-row"><span class="info-key">Publisher</span><span class="info-val">XOGAMESLTD</span></div>
+        <div style="margin-top:12px;display:flex;gap:12px;font-size:12px">
+          <a href="https://valcrown.com" onclick="event.preventDefault();window.valcrown.openExternal('https://valcrown.com')">Website</a>
+          <a href="#" onclick="event.preventDefault();window.valcrown.openExternal('mailto:support@valcrown.com')">Support</a>
+          <a href="#" onclick="event.preventDefault();window.valcrown.openExternal('https://valcrown.com/terms')">Terms</a>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /layout -->
+</div><!-- /titlebar wrapper -->
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// ELECTRON BRIDGE — window.valcrown exposed via preload.js
+// All functions already available via contextBridge
+// This adds Electron-specific event listeners
+// ═══════════════════════════════════════════════════════════
+window.addEventListener('DOMContentLoaded', function() {
+  // Wire Electron IPC game events to app handlers
+  if (window.valcrown && window.valcrown.onGameDetected) {
+    window.valcrown.onGameDetected(function(game) {
+      if (typeof handleGameDetected === 'function') handleGameDetected(game);
+    });
+  }
+  if (window.valcrown && window.valcrown.onGameEnded) {
+    window.valcrown.onGameEnded(function(session) {
+      if (typeof handleGameEnded === 'function') handleGameEnded(session);
+    });
+  }
+  if (window.valcrown && window.valcrown.onSessionTick) {
+    window.valcrown.onSessionTick(function(time) {
+      var el = document.getElementById('session-time');
+      if (el) el.textContent = time;
+    });
+  }
+});
+</script>
+
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// API SERVICE — all calls to api.valcrown.com
+// ═══════════════════════════════════════════════════════════
+var API = {
+  baseUrl: 'https://api.valcrown.com',
+  async request(method, endpoint, data, auth) {
+    var headers = { 'Content-Type': 'application/json' };
+    if (auth) {
+      var token = await window.valcrown.store.get('accessToken');
+      if (token) headers['Authorization'] = 'Bearer ' + token;
+    }
+    var opts = { method: method, headers: headers };
+    if (data) opts.body = JSON.stringify(data);
+    try {
+      var res  = await fetch(this.baseUrl + endpoint, opts);
+      var json = await res.json();
+      if (res.status === 401 && json.code === 'TOKEN_EXPIRED') {
+        var ok = await this.refreshToken();
+        if (ok) return this.request(method, endpoint, data, auth);
+      }
+      return { ok: res.ok, status: res.status, data: json };
+    } catch(e) {
+      return { ok: false, status: 0, data: { error: 'Network error' } };
+    }
+  },
+  async refreshToken() {
+    var rt = await window.valcrown.store.get('refreshToken');
+    if (!rt) return false;
+    var res = await this.request('POST', '/api/auth/refresh', { refreshToken: rt });
+    if (res.ok && res.data.accessToken) {
+      await window.valcrown.store.set('accessToken', res.data.accessToken);
+      return true;
+    }
+    return false;
+  },
+  validate: function(vid) { return this.request('POST', '/api/auth/validate', { deviceVid: vid }, true); },
+  logout:   function(rt)  { return this.request('POST', '/api/auth/logout',   { refreshToken: rt }, true); },
+  checkProcess:    function(name, cpu, ram) { return this.request('POST', '/api/config/process-check',    { processName: name, cpuUsage: cpu, ramUsage: ram }, true); },
+  diagnoseNetwork: function(ping, loss, isp, jitter) { return this.request('POST', '/api/config/network-diagnosis', { pingMs: ping, packetLoss: loss, isp: isp, jitter: jitter }, true); },
+  getBoostAdvice:  function(stats) { return this.request('POST', '/api/config/boost-advice', { systemStats: stats }, true); },
+  askFAQ:          function(q)     { return this.request('POST', '/api/config/faq', { question: q }, true); }
+};
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// DEVICE ID
+// ═══════════════════════════════════════════════════════════
+var DeviceID = {
+  async get() {
+    try {
+      var stored = await window.valcrown.store.get('deviceId');
+      if (stored) return stored;
+      var id = 'APP-' + Math.random().toString(36).substr(2,9).toUpperCase();
+      await window.valcrown.store.set('deviceId', id);
+      return id;
+    } catch(e) { return 'APP-DEFAULT'; }
+  }
+};
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// GAME DATABASE — 200+ games mapped by process name
+// ═══════════════════════════════════════════════════════════
+window.GAME_PROCESS_MAP = {
+  'valorant.exe':{'name':'Valorant','icon':'🎯','genre':'FPS'},
+  'csgo.exe':{'name':'CS:GO','icon':'🔫','genre':'FPS'},
+  'cs2.exe':{'name':'CS2','icon':'🔫','genre':'FPS'},
+  'fortnite.exe':{'name':'Fortnite','icon':'🏗️','genre':'Battle Royale'},
+  'fortniteclient-win64-shipping.exe':{'name':'Fortnite','icon':'🏗️','genre':'Battle Royale'},
+  'r5apex.exe':{'name':'Apex Legends','icon':'🦾','genre':'Battle Royale'},
+  'gta5.exe':{'name':'GTA V','icon':'🚗','genre':'Action'},
+  'rdr2.exe':{'name':'Red Dead Redemption 2','icon':'🤠','genre':'Action'},
+  'rocketleague.exe':{'name':'Rocket League','icon':'🚀','genre':'Sports'},
+  'overwatch.exe':{'name':'Overwatch 2','icon':'⚡','genre':'FPS'},
+  'overwatch2.exe':{'name':'Overwatch 2','icon':'⚡','genre':'FPS'},
+  'destiny2.exe':{'name':'Destiny 2','icon':'🌌','genre':'FPS'},
+  'eldenring.exe':{'name':'Elden Ring','icon':'⚔️','genre':'RPG'},
+  'cyberpunk2077.exe':{'name':'Cyberpunk 2077','icon':'🌆','genre':'RPG'},
+  'witcher3.exe':{'name':'The Witcher 3','icon':'🗡️','genre':'RPG'},
+  'minecraft.exe':{'name':'Minecraft','icon':'⛏️','genre':'Sandbox'},
+  'javaw.exe':{'name':'Minecraft','icon':'⛏️','genre':'Sandbox'},
+  'leagueclient.exe':{'name':'League of Legends','icon':'⚔️','genre':'MOBA'},
+  'league of legends.exe':{'name':'League of Legends','icon':'⚔️','genre':'MOBA'},
+  'dota2.exe':{'name':'Dota 2','icon':'🛡️','genre':'MOBA'},
+  'pubg.exe':{'name':'PUBG','icon':'🎯','genre':'Battle Royale'},
+  'tslgame.exe':{'name':'PUBG','icon':'🎯','genre':'Battle Royale'},
+  'cod.exe':{'name':'Call of Duty','icon':'🎖️','genre':'FPS'},
+  'modernwarfare.exe':{'name':'MW3','icon':'🎖️','genre':'FPS'},
+  'warzone.exe':{'name':'Warzone','icon':'🎖️','genre':'Battle Royale'},
+  'rainbow6.exe':{'name':'Rainbow Six Siege','icon':'🔰','genre':'FPS'},
+  'bf2042.exe':{'name':'Battlefield 2042','icon':'💣','genre':'FPS'},
+  'fifa22.exe':{'name':'FIFA 22','icon':'⚽','genre':'Sports'},
+  'fifa23.exe':{'name':'EA FC 23','icon':'⚽','genre':'Sports'},
+  'thefinals.exe':{'name':'The Finals','icon':'🏆','genre':'FPS'},
+  'xdefiant.exe':{'name':'XDefiant','icon':'🎯','genre':'FPS'},
+  'starcraft2.exe':{'name':'StarCraft 2','icon':'🚀','genre':'RTS'},
+  'heroesofthestorm.exe':{'name':'Heroes of the Storm','icon':'⚡','genre':'MOBA'},
+  'hearthstone.exe':{'name':'Hearthstone','icon':'🃏','genre':'Card'},
+  'worldofwarcraft.exe':{'name':'World of Warcraft','icon':'🧙','genre':'MMO'},
+  'wow.exe':{'name':'WoW','icon':'🧙','genre':'MMO'},
+  'ffxiv.exe':{'name':'Final Fantasy XIV','icon':'🎮','genre':'MMO'},
+  'ffxiv_dx11.exe':{'name':'Final Fantasy XIV','icon':'🎮','genre':'MMO'},
+  'steam.exe':{'name':'Steam','icon':'🎮','genre':'Platform'},
+  'epicgameslauncher.exe':{'name':'Epic Games','icon':'🎮','genre':'Platform'},
+  'battle.net.exe':{'name':'Battle.net','icon':'🎮','genre':'Platform'},
+  'galaxyclient.exe':{'name':'GOG Galaxy','icon':'🎮','genre':'Platform'},
+  // Cloud gaming
+  'geforcenow.exe':{'name':'GeForce NOW','icon':'☁️','genre':'Cloud Gaming'},
+  'xgaming.exe':{'name':'Xbox Cloud','icon':'🎯','genre':'Cloud Gaming'},
+  'boosteroid.exe':{'name':'Boosteroid','icon':'⚡','genre':'Cloud Gaming'},
+  'shadow.exe':{'name':'Shadow PC','icon':'👤','genre':'Cloud Gaming'},
+  'remotepla.exe':{'name':'PS Remote Play','icon':'🕹️','genre':'Cloud Gaming'},
+  'luna.exe':{'name':'Amazon Luna','icon':'🌙','genre':'Cloud Gaming'},
+};
+</script>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// APP LOGIC — main application
+// ═══════════════════════════════════════════════════════════
+'use strict';
+
+var boostActive   = false;
+var boostMode     = 'safe';
+var targetApp     = null;
+var user          = null;
+var license       = null;
+var lastCpu       = 0;
+var lastRam       = 0;
+var lastPing      = 0;
+var bannerDismissed = false;
+var currentGame   = null;
+var sessionTimer  = null;
+var sessionSecs   = 0;
+
+var POPULAR_APPS = [
+  { name:'GeForce NOW', icon:'☁️', sub:'NVIDIA Cloud Gaming' },
+  { name:'Xbox Cloud',  icon:'🎯', sub:'Microsoft xCloud' },
+  { name:'Boosteroid',  icon:'⚡', sub:'Cloud Gaming' },
+  { name:'Shadow PC',   icon:'👤', sub:'High-End Cloud PC' },
+  { name:'PS Remote',   icon:'🕹️', sub:'PlayStation Remote' },
+  { name:'Amazon Luna', icon:'🌙', sub:'Amazon Cloud Gaming' }
+];
+
+// ── INIT ────────────────────────────────────────────────────
+async function init() {
+  try {
+    // Load user from storage
+    try { var _u = await window.valcrown.store.get('user'); user = _u ? JSON.parse(_u) : null; } catch(e) { user = null; }
+    try { var _l = await window.valcrown.store.get('license'); license = _l ? JSON.parse(_l) : null; } catch(e) { license = null; }
+    try { var _t = await window.valcrown.store.get('targetApp'); targetApp = _t ? JSON.parse(_t) : null; } catch(e) { targetApp = null; }
+    try { boostMode = await window.valcrown.store.get('boostMode') || 'safe'; } catch(e) {}
+
+    // Update UI with user info
+    if (user) {
+      var initial = (user.fullName || user.email || 'U')[0].toUpperCase();
+      setEl('user-av', initial);
+      setEl('user-nm', user.fullName || (user.email ? user.email.split('@')[0] : 'User'));
+      setEl('s-email', user.email || '');
+    }
+    if (license) {
+      var plan = capitalize(license.plan) + ' Plan';
+      setEl('user-pl', plan);
+      setEl('s-plan', plan);
+    }
+
+    // Get version
+    try {
+      var v = await window.valcrown.getVersion();
+      if (v) setEl('s-version', v);
+    } catch(e) {}
+
+    // Load system info
+    loadSystemInfo();
+
+    // Check startup state
+    try {
+      var startupEnabled = await window.valcrown.getStartupEnabled();
+      var toggle = document.getElementById('toggle-startup');
+      if (toggle) toggle.checked = startupEnabled;
+    } catch(e) {}
+
+    // Show target if exists
+    if (targetApp) showTargetApp(targetApp);
+    buildAppGrid();
+
+    // Wire game detection
+    window._onGameDetected = function(game) { handleGameDetected(game); };
+    window._onGameEnded    = function(s)    { handleGameEnded(s); };
+
+    // Start metrics
+    startMetrics();
+    startPing();
+
+    // Check anti-cheat in background
+    setTimeout(function() { checkAntiCheat(true); }, 2000);
+
+    // Smart analysis
+    setTimeout(runSmartAnalysis, 4000);
+    setInterval(runSmartAnalysis, 30000);
+
+    // Session validation
+    setTimeout(validateSession, 5000);
+    setInterval(validateSession, 5 * 60 * 1000);
+
+    log('✅ ValCrown started successfully');
+    log('📡 Connected to api.valcrown.com');
+    log('🎮 Monitoring 200+ games automatically');
+  } catch(e) {
+    log('⚠️ Init error: ' + e.message);
+  }
+}
+
+// ── SYSTEM INFO ─────────────────────────────────────────────
+async function loadSystemInfo() {
+  try {
+    var sys = await window.valcrown.getSystemInfo();
+    if (!sys) return;
+    setEl('sys-cpu-name', sys.cpuModel || '--');
+    setEl('sys-cpu-cores', (sys.cpuCores || '--') + ' cores');
+    setEl('sys-gpu-name', sys.gpu || '--');
+    setEl('sys-gpu-vram', sys.gpuVram ? sys.gpuVram + ' MB' : '--');
+    setEl('sys-gpu-vendor', sys.gpuVendor || '--');
+    setEl('sys-os', sys.os || '--');
+    setEl('sys-build', sys.osBuild || '--');
+    setEl('sys-dotnet', sys.dotnetVer || '--');
+    // Dashboard system card
+    setEl('si-cpu', sys.cpuModel && sys.cpuModel.length > 26 ? sys.cpuModel.substring(0,26)+'…' : sys.cpuModel || '--');
+    setEl('si-cores', (sys.cpuCores || '--') + ' cores');
+    setEl('si-ram', (sys.totalRam || '--') + ' GB');
+    setEl('si-os', sys.os || 'Windows');
+    // RAM bar
+    if (sys.totalRam && sys.freeRam) {
+      var usedGb = sys.totalRam - sys.freeRam;
+      var pct    = Math.round(usedGb / sys.totalRam * 100);
+      setEl('sys-ram-used', usedGb.toFixed(1) + ' GB');
+      setEl('sys-ram-total', 'of ' + sys.totalRam + ' GB');
+      var bar = document.getElementById('sys-ram-bar');
+      if (bar) { bar.style.width = pct + '%'; bar.style.background = pct > 85 ? 'var(--red)' : pct > 70 ? 'var(--yellow)' : 'var(--ac)'; }
+    }
+  } catch(e) {}
+}
+
+// ── METRICS ─────────────────────────────────────────────────
+function startMetrics() { updateMetrics(); setInterval(updateMetrics, 2500); }
+
+async function updateMetrics() {
+  try {
+    var cpu = await window.valcrown.getCpuUsage();
+    var ram = await window.valcrown.getRamUsage();
+    lastCpu = typeof cpu === 'number' ? cpu : 0;
+    // ram might be object with usedPct
+    if (ram && typeof ram === 'object' && ram.usedPct !== undefined) {
+      lastRam = ram.usedPct;
+      // Update system page
+      setEl('sys-ram-used', (ram.usedGb || 0).toFixed(1) + ' GB');
+      setEl('sys-ram-total', 'of ' + (ram.totalGb || 0) + ' GB');
+      setEl('sys-cpu-usage', lastCpu + '%');
+      var bar = document.getElementById('sys-ram-bar');
+      if (bar) { bar.style.width = lastRam + '%'; bar.style.background = lastRam > 85 ? 'var(--red)' : lastRam > 70 ? 'var(--yellow)' : 'var(--ac)'; }
+    } else {
+      lastRam = typeof ram === 'number' ? ram : 0;
+    }
+    updateStat('st-cpu', 'v-cpu', 'm-cpu', Math.round(lastCpu), '%', 70, 85, 'var(--green)');
+    updateStat('st-ram', 'v-ram', 'm-ram', Math.round(lastRam), '%', 75, 88, 'var(--green)');
+  } catch(e) {}
+}
+
+function updateStat(cardId, valId, meterId, val, suffix, warn, bad, color) {
+  var card  = document.getElementById(cardId);
+  var valEl = document.getElementById(valId);
+  var meter = document.getElementById(meterId);
+  if (valEl) valEl.textContent = val + suffix;
+  if (card)  { card.className = 'stat'; card.classList.add(val >= bad ? 'bad' : val >= warn ? 'warn' : 'ok'); }
+  if (meter) { meter.style.width = Math.min(val,100)+'%'; meter.style.background = val>=bad?'var(--red)':val>=warn?'var(--yellow)':(color||'var(--green)'); }
+}
+
+// ── PING ────────────────────────────────────────────────────
+function startPing() { doPing(); setInterval(doPing, 5000); }
+async function doPing() {
+  try {
+    var result = await window.valcrown.pingHost('8.8.8.8');
+    var ping   = result && typeof result === 'object' ? (result.ms || 999) : (typeof result === 'number' ? result : 999);
+    lastPing   = ping;
+    ['v-ping','n-ping'].forEach(function(id) { setEl(id, ping); });
+    var card = document.getElementById('st-ping');
+    if (card) { card.className='stat'; card.classList.add(ping<50?'ok':ping<100?'warn':'bad'); }
+    var fill = document.getElementById('m-ping');
+    if (fill) { fill.style.width=Math.min((ping/200)*100,100)+'%'; fill.style.background=ping<50?'var(--green)':ping<100?'var(--yellow)':'var(--red)'; }
+    var nFill = document.getElementById('n-ping-fill');
+    if (nFill) { nFill.style.width=Math.min((ping/200)*100,100)+'%'; nFill.className='ping-fill '+(ping<50?'ping-ok':ping<100?'ping-warn':'ping-bad'); }
+    var nQ = document.getElementById('n-ping-q');
+    if (nQ) { nQ.textContent=ping<30?'Excellent':ping<60?'Good':ping<100?'Fair':'Poor'; nQ.style.color=ping<60?'var(--green)':ping<100?'var(--yellow)':'var(--red)'; }
+  } catch(e) {}
+}
+
+// ── BOOST MODE ──────────────────────────────────────────────
+function setMode(m) {
+  boostMode = m;
+  window.valcrown.store.set('boostMode', m);
+  var sel = document.getElementById('boost-mode-select');
+  if (sel) sel.value = m;
+  // Update mode buttons
+  ['mode-safe','mode-aggressive'].forEach(function(id) {
+    var btn = document.getElementById(id);
+    if (!btn) return;
+    var isSafe = id.includes('safe');
+    var active = (m === 'safe') === isSafe;
+    btn.style.background   = active ? (isSafe ? 'var(--green)' : 'var(--yellow)') : 'var(--bg3)';
+    btn.style.color        = active ? '#000' : 'var(--t2)';
+    btn.style.borderColor  = active ? 'transparent' : 'var(--border2)';
+  });
+  ['mode-safe-boost','mode-aggressive-boost'].forEach(function(id) {
+    var btn = document.getElementById(id);
+    if (!btn) return;
+    var isSafe = id.includes('safe');
+    var active = (m === 'safe') === isSafe;
+    btn.style.fontWeight = active ? '800' : '600';
+    btn.style.opacity    = active ? '1' : '0.5';
+  });
+  log('⚙️ Boost mode: ' + m);
+}
+
+// ── TOGGLE BOOST ────────────────────────────────────────────
+async function toggleBoost() {
+  boostActive = !boostActive;
+  var name = (currentGame && currentGame.name) || (targetApp && targetApp.name) || 'System';
+  if (boostActive) {
+    var result = await window.valcrown.applyBoost((targetApp && targetApp.name) || '', boostMode);
+    updateBoostUI(true, name);
+    if (result && result.applied) log('🚀 Boost ON — ' + result.applied.slice(0,2).join(', '));
+    else log('🚀 Boost activated — ' + name);
+  } else {
+    await window.valcrown.revertBoost();
+    updateBoostUI(false, (targetApp && targetApp.name) ? 'Boost ' + targetApp.name : 'Activate Boost');
+    log('⏹ Boost deactivated');
+  }
+}
+
+function updateBoostUI(active, label) {
+  ['dash-boost-btn','boost-btn'].forEach(function(id) {
+    var btn = document.getElementById(id);
+    if (!btn) return;
+    btn.className = 'boost-btn ' + (active ? 'on' : 'off');
+    btn.innerHTML = active ? '<div class="pulse"></div>' + label : label;
+  });
+  setEl('v-boost', active ? 'ON' : 'OFF');
+  var card = document.getElementById('st-boost');
+  if (card) card.className = 'stat' + (active ? ' ok' : '');
+  setEl('b-priority', active ? 'High' : 'Normal');
+  setEl('b-power',    active ? 'High Performance' : 'Balanced');
+  setEl('b-timer',    active ? '0.5ms' : 'Default');
+  setEl('b-gamedvr',  active ? 'Disabled' : 'On');
+}
+
+// ── BOOST ADVICE ────────────────────────────────────────────
+async function getBoostAdvice() {
+  var el = document.getElementById('boost-advice');
+  if (el) el.innerHTML = '<span class="spin"></span> Analyzing...';
+  var result = await API.getBoostAdvice({ cpuPercent: lastCpu, ramPercent: lastRam, processCount: 60, game: (currentGame && currentGame.name) || (targetApp && targetApp.name) || 'cloud gaming' });
+  if (result.ok && result.data) {
+    var d = result.data;
+    var level = d.level || d.boost_level || 'medium';
+    var reason = d.reason || d.recommendation || '';
+    var color = level === 'conservative' ? 'var(--green)' : level === 'medium' ? 'var(--yellow)' : 'var(--red)';
+    if (el) el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="tag" style="background:'+color+'22;color:'+color+'">'+level.toUpperCase()+'</span><span style="font-size:11px;color:var(--t3)">AI Recommendation</span></div><div style="font-size:13px;color:var(--t2);line-height:1.5">'+reason+'</div><div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="toggleBoost()">Apply Now</button></div>';
+  } else {
+    if (el) el.innerHTML = '<span style="color:var(--t2)">AI unavailable — check API key configuration.</span>';
+  }
+}
+
+// ── ANTI-CHEAT ──────────────────────────────────────────────
+async function checkAntiCheat(silent) {
+  var el = document.getElementById('anticheat-result');
+  var badge = document.getElementById('anticheat-badge');
+  var result = await window.valcrown.checkAntiCheatSvc();
+  if (!result) return;
+  if (result.safe) {
+    if (!silent) {
+      if (el) el.innerHTML = '<div class="tag tag-green" style="margin-bottom:8px">✓ Safe</div><div style="font-size:13px;color:var(--t2)">'+result.warning+'</div>';
+    }
+    if (badge) { badge.style.display='inline-flex'; badge.textContent='✓ Anti-Cheat Safe'; badge.className='tag tag-green'; }
+  } else {
+    if (!silent) {
+      if (el) el.innerHTML = '<div class="tag tag-yellow" style="margin-bottom:8px">⚠️ Anti-Cheat Detected</div><div style="font-size:13px;color:var(--yellow)">'+result.warning+'</div>';
+    }
+    if (badge) { badge.style.display='inline-flex'; badge.textContent='⚠️ Anti-Cheat Active'; badge.className='tag tag-yellow'; }
+    if (!silent) log('⚠️ Anti-cheat detected: ' + result.detected.join(', ') + ' — processes protected');
+  }
+}
+
+// ── GAME DETECTION ──────────────────────────────────────────
+function handleGameDetected(game) {
+  currentGame = game;
+  if (!boostActive) { boostActive = true; updateBoostUI(true, 'Boosting ' + game.name); window.valcrown.applyBoost(game.name, boostMode); }
+  var card = document.getElementById('game-card');
+  var noGame = document.getElementById('no-game-card');
+  if (card) { card.style.display='flex'; setEl('gc-icon', game.icon||'🎮'); setEl('gc-name', game.name); setEl('gc-genre', game.genre||'Gaming'); setEl('session-time','0m 0s'); }
+  if (noGame) noGame.style.display='none';
+  sessionSecs = 0;
+  if (sessionTimer) clearInterval(sessionTimer);
+  sessionTimer = setInterval(function() {
+    sessionSecs++;
+    var m=Math.floor(sessionSecs/60), s=sessionSecs%60, h=Math.floor(m/60);
+    setEl('session-time', h>0?(h+'h '+(m%60)+'m'):(m+'m '+s+'s'));
+  }, 1000);
+  log('🎮 Auto-detected: ' + game.name + ' — Boost activated');
+}
+
+function handleGameEnded(session) {
+  currentGame = null;
+  if (sessionTimer) { clearInterval(sessionTimer); sessionTimer=null; }
+  var card = document.getElementById('game-card');
+  var noGame = document.getElementById('no-game-card');
+  if (card) card.style.display='none';
+  if (noGame) noGame.style.display='flex';
+  if (!targetApp) { boostActive=false; updateBoostUI(false,'Activate Boost'); window.valcrown.revertBoost(); }
+  // Save to history
+  saveSessionHistory(session);
+  loadSessionHistory();
+  log('⏹ Session ended: ' + (session.game && session.game.name) + ' — ' + session.durationFormatted);
+}
+
+async function saveSessionHistory(session) {
+  try {
+    var stored = await window.valcrown.store.get('sessionHistory');
+    var history = stored ? JSON.parse(stored) : [];
+    history.unshift({ game: session.game, duration: session.durationFormatted, date: new Date().toLocaleDateString() });
+    if (history.length > 20) history = history.slice(0, 20);
+    await window.valcrown.store.set('sessionHistory', JSON.stringify(history));
+  } catch(e) {}
+}
+
+async function loadSessionHistory() {
+  var el = document.getElementById('session-history');
+  if (!el) return;
+  try {
+    var stored  = await window.valcrown.store.get('sessionHistory');
+    var history = stored ? JSON.parse(stored) : [];
+    if (!history.length) { el.innerHTML='<div class="empty">No sessions yet — start a game!</div>'; return; }
+    el.innerHTML = history.map(function(s) {
+      return '<div class="proc-item"><div><div class="proc-name">'+(s.game&&s.game.icon?s.game.icon:'🎮')+' '+(s.game&&s.game.name||'Unknown')+'</div><div class="proc-info">'+s.date+' · '+s.duration+'</div></div><span class="tag tag-green">Boosted</span></div>';
+    }).join('');
+  } catch(e) { el.innerHTML='<div class="empty">No sessions yet</div>'; }
+}
+
+// ── TARGET APP ──────────────────────────────────────────────
+function buildAppGrid() {
+  var grid = document.getElementById('app-grid');
+  if (!grid) return;
+  grid.innerHTML = POPULAR_APPS.map(function(app) {
+    return '<div class="app-tile" onclick="setQuickApp(\''+app.name+'\')"><div class="app-tile-icon">'+app.icon+'</div><div class="app-tile-name">'+app.name+'</div><div class="app-tile-sub">'+app.sub+'</div></div>';
+  }).join('');
+}
+
+function pickApp() {
+  var name = prompt('Enter app or game name:');
+  if (name && name.trim()) setTarget({ name: name.trim(), path: name.trim()+'.exe', icon: '🎮' });
+}
+
+function setQuickApp(name) {
+  var app = POPULAR_APPS.find(function(a) { return a.name===name; });
+  setTarget({ name: name, path: name.toLowerCase().replace(/ /g,'')+'.exe', icon: (app&&app.icon)||'🎮' });
+}
+
+async function setTarget(app) {
+  targetApp = app;
+  await window.valcrown.store.set('targetApp', JSON.stringify(app));
+  showTargetApp(app);
+  setEl('dash-target-hint', 'Target: ' + app.name);
+  log('🎯 Target set: ' + app.name);
+  document.querySelectorAll('.app-tile').forEach(function(t) {
+    t.classList.toggle('selected', t.querySelector('.app-tile-name') && t.querySelector('.app-tile-name').textContent===app.name);
+  });
+}
+
+function showTargetApp(app) {
+  var noT = document.getElementById('no-target');
+  var hasT = document.getElementById('has-target');
+  if (noT) noT.style.display='none';
+  if (hasT) hasT.style.display='block';
+  setEl('t-icon', app.icon||app.name[0].toUpperCase());
+  setEl('t-name', app.name);
+  setEl('t-path', app.path||'');
+}
+
+async function clearTarget() {
+  targetApp = null;
+  await window.valcrown.store.delete('targetApp');
+  var noT = document.getElementById('no-target');
+  var hasT = document.getElementById('has-target');
+  if (noT) noT.style.display='block';
+  if (hasT) hasT.style.display='none';
+  document.querySelectorAll('.app-tile').forEach(function(t) { t.classList.remove('selected'); });
+  setEl('dash-target-hint','Set a target app for auto-boost');
+  log('🗑 Target removed');
+}
+
+// ── PROCESSES ───────────────────────────────────────────────
+async function loadProcs() {
+  var list = document.getElementById('proc-list');
+  if (list) list.innerHTML='<div class="empty">Loading...</div>';
+  var procs = await window.valcrown.getProcesses();
+  if (!procs || !procs.length) { if (list) list.innerHTML='<div class="empty">No processes</div>'; return; }
+  if (list) list.innerHTML = procs.slice(0,30).map(function(p) {
+    var badge = p.isAntiCheat ? '<span class="tag tag-yellow" style="font-size:9px">ANTI-CHEAT</span>' :
+                p.isProtected ? '<span class="tag" style="font-size:9px;background:var(--bg3);color:var(--t3)">SYSTEM</span>' : '';
+    var killBtn = p.canKill ? '<button class="btn btn-red btn-sm" onclick="killProc('+p.pid+',\''+p.name+'\')">Kill</button>' : '';
+    return '<div class="proc-item" id="proc-'+p.pid+'"><div style="flex:1"><div class="proc-name">'+p.name+'  '+badge+'</div><div class="proc-info">PID '+p.pid+' · '+p.memoryMb+' MB</div></div><div class="proc-actions"><button class="btn btn-ghost btn-sm" onclick="aiCheckProc(\''+p.name+'\','+p.pid+')">AI Check</button>'+killBtn+'</div></div>';
+  }).join('');
+}
+
+async function aiCheckProc(name, pid) {
+  var result = await API.checkProcess(name, 0, 0);
+  if (result.ok && result.data) {
+    var d = result.data;
+    var action = d.action || 'skip';
+    var reason = d.reason || '';
+    var colors = { kill:'var(--red)', suspend:'var(--yellow)', skip:'var(--green)' };
+    var row = document.getElementById('proc-' + pid);
+    if (row) {
+      var old = row.querySelector('.ai-result');
+      if (old) old.remove();
+      var div = document.createElement('div');
+      div.className='ai-result';
+      div.style.cssText='font-size:10px;color:'+(colors[action]||'var(--t2)')+';margin-top:3px;padding-top:3px;border-top:1px solid var(--border)';
+      div.textContent='🤖 '+action.toUpperCase()+' — '+reason;
+      row.querySelector('.proc-info').after(div);
+    }
+    log('🤖 ' + name + ' → ' + action);
+  }
+}
+
+async function aiCheckAll() {
+  var rows = document.querySelectorAll('.proc-item');
+  if (!rows.length) { await loadProcs(); return; }
+  for (var i=0; i<Math.min(rows.length,8); i++) {
+    var row = rows[i];
+    var name = row.querySelector('.proc-name') && row.querySelector('.proc-name').textContent.split(' ')[0];
+    var pid  = parseInt(row.id.split('-')[1]);
+    if (name && pid) await aiCheckProc(name, pid);
+  }
+}
+
+async function killProc(pid, name) {
+  var result = await window.valcrown.killProcess(pid);
+  if (result && result.success) {
+    var el = document.getElementById('proc-' + pid);
+    if (el) el.remove();
+    log('🔴 Killed: ' + name);
+  } else {
+    log('⚠️ Could not kill: ' + name + (result && result.reason ? ' — ' + result.reason : ''));
+  }
+}
+
+// ── RAM CLEAN ───────────────────────────────────────────────
+async function doCleanRam() {
+  log('🧹 Cleaning RAM...');
+  var result = await window.valcrown.cleanRam();
+  if (result && result.success) log('🧹 RAM cleaned — ' + (result.processescleaned||0) + ' processes optimized');
+  else log('⚠️ RAM clean failed');
+}
+
+// ── NETWORK ─────────────────────────────────────────────────
+async function doFlushDns() {
+  var btn = document.getElementById('dns-btn');
+  if (btn) { btn.textContent='Flushing...'; btn.disabled=true; }
+  var result = await window.valcrown.flushDns();
+  if (btn) { btn.textContent='🌐 Flush DNS Cache'; btn.disabled=false; }
+  if (result && result.success) log('🌐 DNS flushed + Winsock reset');
+  else log('⚠️ DNS flush failed — run as administrator');
+}
+
+async function doTcpOpt() {
+  var result = await window.valcrown.optimizeTcp();
+  if (result && result.success) log('⚡ TCP optimized — ' + (result.applied||[]).slice(0,2).join(', '));
+  else log('⚠️ TCP optimization failed');
+}
+
+async function setDns(primary, secondary) {
+  log('🌐 Setting DNS: ' + primary + ' / ' + secondary + '...');
+  var result = await window.valcrown.setDns(primary, secondary);
+  if (result && result.success) log('🌐 DNS set: ' + primary + ' / ' + secondary);
+  else log('⚠️ DNS change failed — run as administrator');
+}
+
+async function doNetDiag() {
+  var el = document.getElementById('net-diag');
+  if (el) el.innerHTML='<span class="spin"></span> Analyzing connection...';
+  var result = await API.diagnoseNetwork(lastPing, 0.5, 'Unknown', 8);
+  if (result.ok && result.data) {
+    var d = result.data;
+    var sev = d.severity || 'low';
+    var tagClass = sev==='low'?'tag-green':sev==='medium'?'tag-yellow':'tag-red';
+    var fixes = (d.fixes||[]).map(function(f) { return '<div style="font-size:12px;color:var(--t2);padding:5px 0;border-bottom:1px solid var(--border)">→ '+f+'</div>'; }).join('');
+    var dns = d.dns_recommendation && d.dns_recommendation!=='current is fine' ? '<div style="margin-top:8px;font-size:12px;color:var(--blue)">💡 Try DNS: '+d.dns_recommendation+'</div>' : '';
+    if (el) el.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span class="tag '+tagClass+'">'+sev.toUpperCase()+'</span><span style="font-size:11px;color:var(--t3)">Ping: '+lastPing+'ms</span></div><div style="font-size:13px;margin-bottom:10px">'+d.diagnosis+'</div>'+fixes+dns;
+    log('🔍 Network: ' + sev + ' — Ping ' + lastPing + 'ms');
+  } else {
+    if (el) el.innerHTML='<span style="color:var(--t2)">AI diagnosis unavailable.</span>';
+  }
+}
+
+// ── AI CHAT ─────────────────────────────────────────────────
+async function sendMsg() {
+  var inp = document.getElementById('chat-in');
+  var q = inp && inp.value.trim();
+  if (!q) return;
+  if (inp) inp.value='';
+  addMsg(q, 'user');
+  var thinking = addMsg('Thinking...', 'ai');
+  var result = await API.askFAQ(q);
+  if (thinking) {
+    thinking.textContent = (result.ok && result.data && result.data.answer) ? result.data.answer : 'AI unavailable — check your internet connection.';
+  }
+}
+
+function addMsg(text, who) {
+  var box = document.getElementById('chat-box');
+  if (!box) return null;
+  var m = document.createElement('div');
+  m.className='msg '+who;
+  m.textContent=text;
+  box.appendChild(m);
+  box.scrollTop=box.scrollHeight;
+  return m;
+}
+
+function askPreset(q) {
+  var inp = document.getElementById('chat-in');
+  if (inp) inp.value = q;
+  go('ai');
+  sendMsg();
+}
+
+// ── STARTUP TOGGLE ──────────────────────────────────────────
+async function toggleStartup(enabled) {
+  var result = await window.valcrown.setStartup(enabled);
+  log((enabled ? '🚀 Startup enabled' : '🚀 Startup disabled'));
+}
+
+// ── SMART ANALYSIS ──────────────────────────────────────────
+async function runSmartAnalysis() {
+  if (bannerDismissed || currentGame) return;
+  var banner = document.getElementById('smart-banner');
+  if (!banner) return;
+  if (lastCpu > 85) showBanner('bad','🔥','High CPU Load','CPU at '+lastCpu+'% — activate Boost to free resources','Boost Now',function(){toggleBoost();dismissBanner();});
+  else if (lastRam > 82) showBanner('warn','💾','High RAM Usage','RAM at '+Math.round(lastRam)+'% — clean RAM or close apps','Clean RAM',function(){doCleanRam();dismissBanner();});
+  else if (lastPing > 100) showBanner('warn','📡','High Latency','Ping is '+lastPing+'ms — try network optimization','Fix Network',function(){go('network');dismissBanner();});
+  else if (!targetApp && !currentGame) showBanner('info','🎯','No Target Set','Set your gaming app for automatic boost','Set Target',function(){go('target');dismissBanner();});
+  else if (!boostActive) showBanner('ok','✅','System Ready','CPU '+Math.round(lastCpu)+'% · RAM '+Math.round(lastRam)+'% · Ping '+lastPing+'ms',null,null);
+  else { if (banner) banner.innerHTML=''; }
+}
+
+function showBanner(type, icon, title, sub, btnLabel, btnAction) {
+  var banner = document.getElementById('smart-banner');
+  if (!banner) return;
+  var btnHtml = btnLabel ? '<button class="btn btn-sm" id="banner-btn" style="background:white;color:#000;flex-shrink:0">'+btnLabel+'</button>' : '';
+  banner.innerHTML='<div class="smart-banner '+type+'"><div class="banner-icon">'+icon+'</div><div class="banner-text"><div class="banner-title">'+title+'</div><div class="banner-sub">'+sub+'</div></div>'+btnHtml+'<button onclick="dismissBanner()" style="background:none;border:none;color:var(--t3);font-size:16px;cursor:pointer;padding:0 0 0 8px;flex-shrink:0">✕</button></div>';
+  if (btnLabel && btnAction) {
+    var btn = document.getElementById('banner-btn');
+    if (btn) btn.onclick = btnAction;
+  }
+}
+
+function dismissBanner() {
+  var el = document.getElementById('smart-banner');
+  if (el) el.innerHTML='';
+  bannerDismissed=true;
+  setTimeout(function(){ bannerDismissed=false; }, 60000);
+}
+
+// ── SESSION VALIDATION ──────────────────────────────────────
+async function validateSession() {
+  try {
+    var vid    = await Promise.race([DeviceID.get(), new Promise(function(r){ setTimeout(function(){ r('APP-DEFAULT'); },3000); })]);
+    var result = await API.validate(vid);
+    if (result && !result.ok && result.data && result.data.code === 'DEVICE_MISMATCH') doLogout();
+  } catch(e) {}
+}
+
+// ── LOGOUT ──────────────────────────────────────────────────
+async function doLogout() {
+  try { var rt = await window.valcrown.store.get('refreshToken'); if (rt) await API.logout(rt); } catch(e) {}
+  await window.valcrown.store.clear();
+  window.location.reload();
+}
+
+// ── NAVIGATION ──────────────────────────────────────────────
+function go(name) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  document.querySelectorAll('.nav-btn').forEach(function(b){ b.classList.remove('active'); });
+  var pg = document.getElementById('pg-'+name);
+  if (pg) pg.classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(function(b){
+    var oc = b.getAttribute('onclick');
+    if (oc && oc.indexOf("'"+name+"'") !== -1) b.classList.add('active');
+  });
+}
+
+// ── LOG ─────────────────────────────────────────────────────
+function log(msg) {
+  var box = document.getElementById('activity-log');
+  if (!box) return;
+  var time = new Date().toLocaleTimeString('en',{hour12:false});
+  var entry = document.createElement('div');
+  entry.className='activity-item';
+  entry.innerHTML='<span class="activity-time">'+time+'</span><span class="activity-msg">'+msg+'</span>';
+  var empty = box.querySelector('.empty');
+  if (empty) box.innerHTML='';
+  box.insertBefore(entry, box.firstChild);
+  while (box.children.length>25) box.removeChild(box.lastChild);
+}
+
+function clearLog() { var b=document.getElementById('activity-log'); if(b) b.innerHTML='<div class="empty">Log cleared</div>'; }
+
+// ── HELPERS ─────────────────────────────────────────────────
+function setEl(id, text) { var el=document.getElementById(id); if(el) el.textContent=text; }
+function capitalize(s) { return s?s.charAt(0).toUpperCase()+s.slice(1):''; }
+
+// ── START ───────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

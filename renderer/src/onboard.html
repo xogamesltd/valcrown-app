@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>ValCrown — Welcome</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg0:#080808;--bg1:#101010;--bg2:#181818;--bg3:#222;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.12);
+  --t1:#f0f0f0;--t2:#888;--t3:#555;
+  --ac:#7c6aff;--ac2:#6254e0;--ac-dim:rgba(124,106,255,0.12);
+  --green:#22d47a;--red:#ff4d4d;--red-dim:rgba(255,77,77,0.12);
+  --r:10px;--r-sm:7px;--sans:-apple-system,sans-serif;
+}
+html,body{height:100%;overflow:hidden;font-family:var(--sans);background:var(--bg0);color:var(--t1);font-size:14px;-webkit-font-smoothing:antialiased;-webkit-app-region:drag}
+input,button{font-family:var(--sans);-webkit-app-region:no-drag}
+
+/* TITLEBAR */
+.titlebar{height:32px;display:flex;align-items:center;justify-content:flex-end;padding:0 8px;flex-shrink:0}
+.wbtn{width:42px;height:28px;background:transparent;border:none;color:#9090c0;font-size:13px;cursor:pointer;border-radius:4px;-webkit-app-region:no-drag;transition:background 0.15s}
+.wbtn:hover{background:rgba(255,255,255,0.1)}
+.wbtn.cl:hover{background:#e81123;color:white}
+
+/* CONTENT */
+.wrap{display:flex;flex-direction:column;align-items:center;justify-content:center;height:calc(100vh - 32px);padding:32px;-webkit-app-region:no-drag}
+.logo{text-align:center;margin-bottom:28px}
+.logo-icon{width:60px;height:60px;background:var(--ac);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:900;color:#fff;margin:0 auto 14px;box-shadow:0 8px 32px rgba(124,106,255,0.4)}
+.logo-title{font-size:24px;font-weight:800;letter-spacing:-0.5px}
+.logo-sub{font-size:13px;color:var(--t2);margin-top:4px}
+
+/* TABS */
+.tabs{display:flex;background:var(--bg2);border-radius:var(--r-sm);padding:3px;margin-bottom:20px;width:100%;max-width:340px}
+.tab{flex:1;padding:8px;border:none;background:transparent;color:var(--t2);font-size:13px;font-weight:600;border-radius:6px;cursor:pointer;transition:all 0.15s}
+.tab.active{background:var(--bg1);color:var(--t1);box-shadow:0 1px 4px rgba(0,0,0,0.4)}
+
+/* FORM */
+.form{width:100%;max-width:340px}
+.fgrp{margin-bottom:12px}
+.flabel{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;display:block}
+.finp{width:100%;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--r-sm);padding:11px 12px;color:var(--t1);font-size:13px;transition:border-color 0.15s;outline:none}
+.finp:focus{border-color:var(--ac)}
+.finp::placeholder{color:var(--t3)}
+.ferr{background:var(--red-dim);border:1px solid rgba(255,77,77,0.2);color:var(--red);padding:9px 12px;border-radius:var(--r-sm);font-size:12px;margin-bottom:12px;display:none}
+.ferr.show{display:block}
+.fbtn{width:100%;height:46px;background:var(--ac);color:#fff;border:none;border-radius:var(--r-sm);font-size:14px;font-weight:700;cursor:pointer;transition:all 0.15s;margin-top:4px;display:flex;align-items:center;justify-content:center;gap:8px}
+.fbtn:hover{background:var(--ac2);transform:translateY(-1px);box-shadow:0 4px 20px rgba(124,106,255,0.4)}
+.fbtn:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none}
+.footer{text-align:center;margin-top:16px;font-size:12px;color:var(--t3)}
+.footer a{color:var(--ac);text-decoration:none;font-weight:500}
+.spin{width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.5s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="titlebar">
+  <button class="wbtn cl" onclick="window.valcrown.closeOnboard()">✕</button>
+</div>
+<div class="wrap">
+  <div class="logo">
+    <div class="logo-icon">V</div>
+    <div class="logo-title">ValCrown</div>
+    <div class="logo-sub">Cloud Gaming Optimizer by XOGAMESLTD</div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+    <button class="tab" id="tab-register" onclick="switchTab('register')">Create Account</button>
+  </div>
+
+  <div class="form">
+    <div class="ferr" id="err"></div>
+
+    <!-- LOGIN -->
+    <div id="form-login">
+      <div class="fgrp">
+        <label class="flabel">Email</label>
+        <input class="finp" id="login-email" type="email" placeholder="your@email.com" autocomplete="email">
+      </div>
+      <div class="fgrp">
+        <label class="flabel">Password</label>
+        <input class="finp" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+      <button class="fbtn" id="login-btn" onclick="doLogin()">Sign In</button>
+      <div class="footer"><a href="https://valcrown.com/forgot" onclick="event.preventDefault();window.valcrown.openExternal('https://valcrown.com/forgot')">Forgot password?</a></div>
+    </div>
+
+    <!-- REGISTER -->
+    <div id="form-register" style="display:none">
+      <div class="fgrp">
+        <label class="flabel">Full Name</label>
+        <input class="finp" id="reg-name" type="text" placeholder="Your name">
+      </div>
+      <div class="fgrp">
+        <label class="flabel">Email</label>
+        <input class="finp" id="reg-email" type="email" placeholder="your@email.com">
+      </div>
+      <div class="fgrp">
+        <label class="flabel">Password</label>
+        <input class="finp" id="reg-pass" type="password" placeholder="Min 8 characters">
+      </div>
+      <div class="fgrp">
+        <label class="flabel">License Key</label>
+        <input class="finp" id="reg-key" type="text" placeholder="VC-XXXX-XXXX-XXXX">
+      </div>
+      <button class="fbtn" id="reg-btn" onclick="doRegister()">Create Account</button>
+      <div class="footer"><a href="https://valcrown.com/buy" onclick="event.preventDefault();window.valcrown.openExternal('https://valcrown.com/buy')">Get a license key →</a></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'https://api.valcrown.com';
+
+function switchTab(tab) {
+  document.getElementById('tab-login').classList.toggle('active', tab==='login');
+  document.getElementById('tab-register').classList.toggle('active', tab==='register');
+  document.getElementById('form-login').style.display    = tab==='login'    ? 'block' : 'none';
+  document.getElementById('form-register').style.display = tab==='register' ? 'block' : 'none';
+  showErr('');
+}
+
+function showErr(msg) {
+  var el = document.getElementById('err');
+  el.textContent = msg;
+  el.classList.toggle('show', !!msg);
+}
+
+function setLoading(id, loading) {
+  var btn = document.getElementById(id);
+  btn.disabled = loading;
+  btn.innerHTML = loading ? '<span class="spin"></span> Please wait...' : (id==='login-btn' ? 'Sign In' : 'Create Account');
+}
+
+async function doLogin() {
+  var email = document.getElementById('login-email').value.trim();
+  var pass  = document.getElementById('login-pass').value;
+  if (!email || !pass) { showErr('Please fill in all fields'); return; }
+  setLoading('login-btn', true);
+  showErr('');
+  try {
+    var res = await fetch(API + '/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password: pass, deviceVid: 'APP-ELECTRON' })
+    });
+    var data = await res.json();
+    if (!res.ok) { showErr(data.error || 'Invalid credentials'); setLoading('login-btn', false); return; }
+    window.valcrown.onboardComplete({
+      accessToken:  data.accessToken,
+      refreshToken: data.refreshToken,
+      user:         data.user,
+      license:      data.license || null
+    });
+  } catch(e) {
+    showErr('Connection error — check your internet');
+    setLoading('login-btn', false);
+  }
+}
+
+async function doRegister() {
+  var name  = document.getElementById('reg-name').value.trim();
+  var email = document.getElementById('reg-email').value.trim();
+  var pass  = document.getElementById('reg-pass').value;
+  var key   = document.getElementById('reg-key').value.trim();
+  if (!name || !email || !pass) { showErr('Please fill in all fields'); return; }
+  if (pass.length < 8) { showErr('Password must be at least 8 characters'); return; }
+  setLoading('reg-btn', true);
+  showErr('');
+  try {
+    var res = await fetch(API + '/api/auth/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fullName: name, email, password: pass, licenseKey: key || undefined })
+    });
+    var data = await res.json();
+    if (!res.ok) { showErr(data.error || 'Registration failed'); setLoading('reg-btn', false); return; }
+    window.valcrown.onboardComplete({
+      accessToken:  data.accessToken,
+      refreshToken: data.refreshToken,
+      user:         data.user,
+      license:      data.license || null
+    });
+  } catch(e) {
+    showErr('Connection error — check your internet');
+    setLoading('reg-btn', false);
+  }
+}
+
+// Enter key
+document.addEventListener('keypress', function(e) {
+  if (e.key !== 'Enter') return;
+  var loginVisible = document.getElementById('form-login').style.display !== 'none';
+  if (loginVisible) doLogin(); else doRegister();
+});
+</script>
+</body>
+</html>

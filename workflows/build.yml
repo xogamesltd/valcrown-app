@@ -1,0 +1,65 @@
+name: Build ValCrown Windows Installer
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Windows installer
+        run: npm run build:win
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: ValCrown-Windows-Installer
+          path: dist/*.exe
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: v1.0.0
+          name: ValCrown v1.0.0
+          body: |
+            ## ValCrown Gaming Optimizer v1.0.0
+
+            ### What's included
+            - Auto game detection (200+ games)
+            - Boost Engine — CPU, RAM, network optimization
+            - AI Advisor powered by Claude Sonnet 4.6
+            - Discord Rich Presence
+            - System tray support
+
+            ### Installation
+            1. Download `ValCrown-Setup-1.0.0.exe`
+            2. Run as Administrator
+            3. Follow installation wizard
+            4. Launch ValCrown and sign in
+
+            ### Requirements
+            - Windows 10 or Windows 11 (64-bit)
+            - Administrator privileges
+            - Internet connection
+          files: dist/*.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
