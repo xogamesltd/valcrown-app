@@ -23,16 +23,14 @@
   "build": {
     "appId": "com.xogamesltd.valcrown",
     "productName": "ValCrown",
-    "copyright": "Copyright © 2026 XOGAMESLTD",
+    "copyright": "Copyright 2026 XOGAMESLTD",
     "files": [
       "electron/**/*",
       "renderer/**/*",
-      "core/**/*",
       "package.json"
     ],
     "win": {
       "target": [{ "target": "nsis", "arch": ["x64"] }],
-      "icon": "renderer/src/icon.ico",
       "requestedExecutionLevel": "requireAdministrator"
     },
     "nsis": {
@@ -41,9 +39,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "ValCrown",
-      "installerHeaderImage": "renderer/src/banner.bmp",
       "include": "installer/installer.nsh",
-      "deleteAppDataOnUninstall": false
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
     }
   }
 }
