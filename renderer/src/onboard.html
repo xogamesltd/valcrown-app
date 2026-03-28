@@ -107,11 +107,28 @@ input,button{font-family:var(--sans);-webkit-app-region:no-drag}
       <button class="fbtn" id="reg-btn" onclick="doRegister()">Create Account</button>
       <div class="footer"><a href="https://valcrown.com/buy" onclick="event.preventDefault();window.valcrown.openExternal('https://valcrown.com/buy')">Get a license key →</a></div>
     </div>
+
+    <!-- Guest / Demo access -->
+    <div style="width:100%;max-width:340px;margin-top:12px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="flex:1;height:1px;background:rgba(255,255,255,0.06)"></div>
+        <span style="font-size:11px;color:var(--t3)">or</span>
+        <div style="flex:1;height:1px;background:rgba(255,255,255,0.06)"></div>
+      </div>
+      <button onclick="continueAsGuest()" style="width:100%;height:42px;background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:var(--r-sm);color:var(--t2);font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s" onmouseover="this.style.borderColor='rgba(124,106,255,0.5)';this.style.color='#f0f0f0'" onmouseout="this.style.borderColor='rgba(255,255,255,0.12)';this.style.color='var(--t2)'">
+        👀 Explore without account
+      </button>
+      <div style="text-align:center;margin-top:10px;font-size:11px;color:var(--t3)">
+        Limited features · <a href="https://valcrown.com" onclick="event.preventDefault();window.valcrown.openExternal('https://valcrown.com')" style="color:var(--ac);text-decoration:none">Get full access →</a>
+      </div>
+    </div>
+
   </div>
 </div>
 
 <script>
 const API = 'https://api.valcrown.com';
+const TIMEOUT_MS = 10000;
 
 function switchTab(tab) {
   document.getElementById('tab-login').classList.toggle('active', tab==='login');
@@ -127,26 +144,58 @@ function showErr(msg) {
   el.classList.toggle('show', !!msg);
 }
 
+function showSuccess(msg) {
+  var el = document.getElementById('err');
+  el.textContent = msg;
+  el.style.background = 'rgba(34,212,122,0.1)';
+  el.style.borderColor = 'rgba(34,212,122,0.3)';
+  el.style.color = '#22d47a';
+  el.classList.add('show');
+}
+
 function setLoading(id, loading) {
   var btn = document.getElementById(id);
+  if (!btn) return;
   btn.disabled = loading;
-  btn.innerHTML = loading ? '<span class="spin"></span> Please wait...' : (id==='login-btn' ? 'Sign In' : 'Create Account');
+  btn.innerHTML = loading
+    ? '<span class="spin"></span> Please wait...'
+    : (id === 'login-btn' ? 'Sign In' : 'Create Account — Get 3 Days Free');
+}
+
+// Fetch with timeout
+async function fetchWithTimeout(url, opts) {
+  var controller = new AbortController();
+  var timer = setTimeout(function() { controller.abort(); }, TIMEOUT_MS);
+  try {
+    var res = await fetch(url, Object.assign({}, opts, { signal: controller.signal }));
+    clearTimeout(timer);
+    return res;
+  } catch(e) {
+    clearTimeout(timer);
+    if (e.name === 'AbortError') throw new Error('Request timed out — server may be slow');
+    throw new Error('Cannot reach valcrown.com — check your internet connection');
+  }
 }
 
 async function doLogin() {
   var email = document.getElementById('login-email').value.trim();
   var pass  = document.getElementById('login-pass').value;
   if (!email || !pass) { showErr('Please fill in all fields'); return; }
+  if (!email.includes('@')) { showErr('Please enter a valid email'); return; }
   setLoading('login-btn', true);
   showErr('');
   try {
-    var res = await fetch(API + '/api/auth/login', {
+    var res  = await fetchWithTimeout(API + '/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password: pass, deviceVid: 'APP-ELECTRON' })
+      body: JSON.stringify({ email: email.toLowerCase(), password: pass, deviceVid: 'APP-ELECTRON' })
     });
     var data = await res.json();
-    if (!res.ok) { showErr(data.error || 'Invalid credentials'); setLoading('login-btn', false); return; }
+    if (!res.ok) {
+      showErr(data.error || 'Incorrect email or password');
+      setLoading('login-btn', false);
+      return;
+    }
     window.valcrown.onboardComplete({
       accessToken:  data.accessToken,
       refreshToken: data.refreshToken,
@@ -154,7 +203,7 @@ async function doLogin() {
       license:      data.license || null
     });
   } catch(e) {
-    showErr('Connection error — check your internet');
+    showErr(e.message || 'Connection failed — check your internet');
     setLoading('login-btn', false);
   }
 }
@@ -165,30 +214,55 @@ async function doRegister() {
   var pass  = document.getElementById('reg-pass').value;
   var key   = document.getElementById('reg-key').value.trim();
   if (!name || !email || !pass) { showErr('Please fill in all fields'); return; }
+  if (!email.includes('@')) { showErr('Please enter a valid email'); return; }
   if (pass.length < 8) { showErr('Password must be at least 8 characters'); return; }
   setLoading('reg-btn', true);
   showErr('');
   try {
-    var res = await fetch(API + '/api/auth/register', {
+    var res  = await fetchWithTimeout(API + '/api/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fullName: name, email, password: pass, licenseKey: key || undefined })
+      body: JSON.stringify({ fullName: name, email: email.toLowerCase(), password: pass, licenseKey: key || undefined, turnstileToken: 'SKIP' })
     });
     var data = await res.json();
-    if (!res.ok) { showErr(data.error || 'Registration failed'); setLoading('reg-btn', false); return; }
-    window.valcrown.onboardComplete({
-      accessToken:  data.accessToken,
-      refreshToken: data.refreshToken,
-      user:         data.user,
-      license:      data.license || null
-    });
+    if (!res.ok) {
+      showErr(data.error || 'Registration failed — try again');
+      setLoading('reg-btn', false);
+      return;
+    }
+    // Show trial success message briefly
+    if (data.trial) {
+      showSuccess('🎉 Account created! 3-day free trial activated. Launching ValCrown...');
+    }
+    setTimeout(function() {
+      window.valcrown.onboardComplete({
+        accessToken:  data.accessToken  || 'GUEST',
+        refreshToken: data.refreshToken || '',
+        user:         data.user         || { fullName: name, email: email },
+        license:      data.license      || null
+      });
+    }, 1200);
   } catch(e) {
-    showErr('Connection error — check your internet');
+    showErr(e.message || 'Connection failed — check your internet');
     setLoading('reg-btn', false);
   }
 }
 
-// Enter key
+function continueAsGuest() {
+  window.valcrown.onboardComplete({
+    accessToken:  'GUEST',
+    refreshToken: '',
+    user:         { fullName: 'Guest', email: 'guest@valcrown.com', role: 'guest' },
+    license:      null
+  });
+}
+
+// Update register button text on load
+window.addEventListener('DOMContentLoaded', function() {
+  var regBtn = document.getElementById('reg-btn');
+  if (regBtn) regBtn.textContent = 'Create Account — Get 3 Days Free';
+});
+
 document.addEventListener('keypress', function(e) {
   if (e.key !== 'Enter') return;
   var loginVisible = document.getElementById('form-login').style.display !== 'none';
