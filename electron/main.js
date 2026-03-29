@@ -260,7 +260,7 @@ app.whenReady().then(() => {
   createTray();
 
   const token = store.get('accessToken');
-  if (!token) {
+  if (!token || token === '') {
     createOnboardWindow();
   } else {
     createMainWindow();
@@ -448,8 +448,45 @@ ipcMain.handle('set-dns', (_, primary, secondary) => new Promise((resolve) => {
 
 // Boost
 ipcMain.handle('apply-boost', (_, targetName, mode) => new Promise((resolve) => {
-  applyBoost(targetName, mode || 'safe');
-  resolve({ success: true, mode: mode || 'safe' });
+  const m = mode || 'safe';
+  if (os.platform() !== 'win32') {
+    resolve({ success: true, mode: m, applied: ['Simulated on non-Windows'] });
+    return;
+  }
+  boostActive = true;
+  const applied = [];
+  const cmds = [];
+
+  cmds.push('powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c');
+  applied.push('Power: High Performance');
+
+  cmds.push('reg add "HKCU\System\GameConfigStore" /v GameDVR_Enabled /t REG_DWORD /d 0 /f');
+  applied.push('GameDVR: Disabled');
+
+  cmds.push('reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v HwSchMode /t REG_DWORD /d 2 /f');
+  applied.push('HAGS: Enabled');
+
+  cmds.push('netsh int tcp set global autotuninglevel=normal && netsh int tcp set global rss=enabled');
+  applied.push('TCP: Optimized');
+
+  if (targetName) {
+    cmds.push(`wmic process where name="${targetName}.exe" CALL setpriority "high priority"`);
+    applied.push(`Priority: ${targetName} → High`);
+  }
+
+  if (m === 'aggressive') {
+    cmds.push('sc stop SysMain && sc stop WSearch');
+    applied.push('SysMain + WSearch: Stopped');
+    cmds.push('reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpAckFrequency /t REG_DWORD /d 1 /f');
+    cmds.push('reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TCPNoDelay /t REG_DWORD /d 1 /f');
+    applied.push('Nagle Algorithm: Disabled');
+  }
+
+  exec(cmds.join(' & '), { windowsHide: true }, (err) => {
+    if (err) log('[Boost] Error: ' + err.message);
+    else log('[Boost] Applied ' + m + ': ' + applied.join(', '));
+    resolve({ success: !err, mode: m, applied });
+  });
 }));
 
 ipcMain.handle('revert-boost', () => {
@@ -496,6 +533,9 @@ ipcMain.handle('select-app', async () => {
 });
 
 // Misc
+// Guest mode check
+ipcMain.handle('is-guest', () => store.get('accessToken') === 'GUEST');
+
 ipcMain.handle('get-api-url',        () => API_URL);
 ipcMain.handle('get-version',        () => app.getVersion());
 ipcMain.on('open-external',          (_, url) => shell.openExternal(url));

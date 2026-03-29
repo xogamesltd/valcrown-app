@@ -180,6 +180,12 @@ a{color:var(--ac);text-decoration:none}
 .drop-title{font-size:14px;font-weight:600;margin-bottom:4px}
 .drop-sub{font-size:12px;color:var(--t2);line-height:1.5}
 
+/* GUEST BANNER */
+.guest-banner{background:linear-gradient(90deg,rgba(124,106,255,0.15),rgba(34,212,122,0.08));border:1px solid rgba(124,106,255,0.3);border-radius:var(--r);padding:10px 14px;display:none;align-items:center;gap:10px;margin-bottom:12px}
+.guest-banner.show{display:flex}
+.guest-lock{opacity:0.4;pointer-events:none;position:relative}
+.guest-lock::after{content:'🔒 Sign in to unlock';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--t2);background:rgba(8,8,8,0.7);border-radius:var(--r);opacity:1}
+
 /* TOGGLE SWITCH */
 .toggle{position:relative;width:36px;height:20px;flex-shrink:0}
 .toggle input{opacity:0;width:0;height:0}
@@ -295,6 +301,14 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
       </div>
 
       <div id="smart-banner"></div>
+      <div class="guest-banner" id="guest-banner">
+        <span style="font-size:18px">👀</span>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">Exploring as Guest</div>
+          <div style="font-size:11px;color:var(--t2)">System monitoring works · AI, Boost and Network require an account</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="doSignIn()">Sign In</button>
+      </div>
 
       <!-- Game Detection -->
       <div class="game-card" id="game-card">
@@ -818,6 +832,25 @@ async function init() {
     setTimeout(validateSession, 5000);
     setInterval(validateSession, 5 * 60 * 1000);
 
+    // Guest mode handling
+    try {
+      var isGuest = await window.valcrown.isGuest();
+      if (isGuest) {
+        var banner = document.getElementById('guest-banner');
+        if (banner) banner.classList.add('show');
+        setEl('user-nm', 'Guest');
+        setEl('user-pl', 'Free Preview');
+        setEl('s-email', 'guest@valcrown.com');
+        setEl('s-plan', 'Guest — Limited access');
+        // Lock AI and boost advice
+        var lockEls = ['boost-advice', 'net-diag'];
+        lockEls.forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3)">🔒 Sign in to use AI features</div>';
+        });
+      }
+    } catch(e) {}
+
     log('✅ ValCrown started successfully');
     log('📡 Connected to api.valcrown.com');
     log('🎮 Monitoring 200+ games automatically');
@@ -938,18 +971,36 @@ function setMode(m) {
 
 // ── TOGGLE BOOST ────────────────────────────────────────────
 async function toggleBoost() {
-  boostActive = !boostActive;
   var name = (currentGame && currentGame.name) || (targetApp && targetApp.name) || 'System';
+  // Show loading state
+  ['dash-boost-btn','boost-btn'].forEach(function(id) {
+    var btn = document.getElementById(id);
+    if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spin"></span> Applying...'; }
+  });
+  boostActive = !boostActive;
   if (boostActive) {
     var result = await window.valcrown.applyBoost((targetApp && targetApp.name) || '', boostMode);
     updateBoostUI(true, name);
-    if (result && result.applied) log('🚀 Boost ON — ' + result.applied.slice(0,2).join(', '));
-    else log('🚀 Boost activated — ' + name);
+    if (result && result.success) {
+      var tweaks = result.applied || ['Power plan','GameDVR disabled','Timer optimized'];
+      log('🚀 Boost ON [' + boostMode + '] — ' + tweaks.slice(0,3).join(' · '));
+      // Show applied tweaks in boost page
+      var advEl = document.getElementById('boost-advice');
+      if (advEl && advEl.textContent.includes('Click')) {
+        advEl.innerHTML = '<div class="tag tag-green" style="margin-bottom:8px">✅ Boost Active</div><div style="font-size:12px;color:var(--t2);line-height:1.8">' + tweaks.map(function(t){ return '✓ ' + t; }).join('<br>') + '</div><div style="margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="getBoostAdvice()">Get AI Recommendation</button></div>';
+      }
+    } else {
+      log('⚠️ Boost failed — run app as Administrator');
+    }
   } else {
     await window.valcrown.revertBoost();
     updateBoostUI(false, (targetApp && targetApp.name) ? 'Boost ' + targetApp.name : 'Activate Boost');
     log('⏹ Boost deactivated');
   }
+  ['dash-boost-btn','boost-btn'].forEach(function(id) {
+    var btn = document.getElementById(id);
+    if (btn) btn.disabled = false;
+  });
 }
 
 function updateBoostUI(active, label) {
@@ -971,16 +1022,50 @@ function updateBoostUI(active, label) {
 // ── BOOST ADVICE ────────────────────────────────────────────
 async function getBoostAdvice() {
   var el = document.getElementById('boost-advice');
-  if (el) el.innerHTML = '<span class="spin"></span> Analyzing...';
-  var result = await API.getBoostAdvice({ cpuPercent: lastCpu, ramPercent: lastRam, processCount: 60, game: (currentGame && currentGame.name) || (targetApp && targetApp.name) || 'cloud gaming' });
+  if (el) el.innerHTML = '<div style="display:flex;align-items:center;gap:8px"><span class="spin"></span><span style="color:var(--t2);font-size:13px">AI analyzing your system...</span></div>';
+
+  // Check if guest
+  var isGuest = false;
+  try { isGuest = await window.valcrown.isGuest(); } catch(e) {}
+  if (isGuest) {
+    if (el) el.innerHTML = '<div style="text-align:center;padding:16px"><div style="font-size:20px;margin-bottom:8px">🔒</div><div style="font-size:13px;color:var(--t2)">AI features require an account.</div><div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="doSignIn()">Sign In Free</button></div></div>';
+    return;
+  }
+
+  var result = await API.getBoostAdvice({
+    cpuPercent:   Math.round(lastCpu),
+    ramPercent:   Math.round(lastRam),
+    pingMs:       lastPing,
+    processCount: 60,
+    boostMode:    boostMode,
+    game:         (currentGame && currentGame.name) || (targetApp && targetApp.name) || 'cloud gaming'
+  });
+
   if (result.ok && result.data) {
     var d = result.data;
-    var level = d.level || d.boost_level || 'medium';
-    var reason = d.reason || d.recommendation || '';
-    var color = level === 'conservative' ? 'var(--green)' : level === 'medium' ? 'var(--yellow)' : 'var(--red)';
-    if (el) el.innerHTML = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span class="tag" style="background:'+color+'22;color:'+color+'">'+level.toUpperCase()+'</span><span style="font-size:11px;color:var(--t3)">AI Recommendation</span></div><div style="font-size:13px;color:var(--t2);line-height:1.5">'+reason+'</div><div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="toggleBoost()">Apply Now</button></div>';
+    var level  = d.level || d.boost_level || d.recommendation_level || 'medium';
+    var reason = d.reason || d.recommendation || d.advice || d.message || 'Apply boost for better performance.';
+    var color  = level === 'conservative' || level === 'low'
+      ? 'var(--green)' : level === 'medium' ? 'var(--yellow)' : 'var(--red)';
+    if (el) el.innerHTML =
+      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+      + '<span class="tag" style="background:'+color+'22;color:'+color+';font-size:11px">'+level.toUpperCase()+'</span>'
+      + '<span style="font-size:11px;color:var(--t3)">AI Recommendation · CPU '+Math.round(lastCpu)+'% · RAM '+Math.round(lastRam)+'%</span></div>'
+      + '<div style="font-size:13px;color:var(--t1);line-height:1.6;margin-bottom:12px">'+reason+'</div>'
+      + '<div style="display:flex;gap:8px">'
+      + '<button class="btn btn-primary btn-sm" onclick="if(!boostActive)toggleBoost()">⚡ Apply Boost</button>'
+      + '<button class="btn btn-ghost btn-sm" onclick="getBoostAdvice()">↻ Re-analyze</button>'
+      + '</div>';
+    log('🤖 AI Boost: ' + level + ' — ' + reason.slice(0, 60) + '...');
   } else {
-    if (el) el.innerHTML = '<span style="color:var(--t2)">AI unavailable — check API key configuration.</span>';
+    var errMsg = result.data && result.data.error ? result.data.error : 'AI service unavailable';
+    if (el) el.innerHTML =
+      '<div style="padding:12px;background:var(--red-dim);border:1px solid rgba(255,77,77,0.2);border-radius:var(--r-sm)">'
+      + '<div style="font-size:12px;color:var(--red);margin-bottom:6px">⚠️ AI Unavailable</div>'
+      + '<div style="font-size:11px;color:var(--t2)">'+errMsg+'</div>'
+      + '</div>'
+      + '<div style="margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="getBoostAdvice()">↻ Try Again</button></div>';
+    log('⚠️ AI Boost failed: ' + errMsg);
   }
 }
 
@@ -988,20 +1073,19 @@ async function getBoostAdvice() {
 async function checkAntiCheat(silent) {
   var el = document.getElementById('anticheat-result');
   var badge = document.getElementById('anticheat-badge');
-  var result = await window.valcrown.checkAntiCheatSvc();
-  if (!result) return;
-  if (result.safe) {
-    if (!silent) {
-      if (el) el.innerHTML = '<div class="tag tag-green" style="margin-bottom:8px">✓ Safe</div><div style="font-size:13px;color:var(--t2)">'+result.warning+'</div>';
-    }
-    if (badge) { badge.style.display='inline-flex'; badge.textContent='✓ Anti-Cheat Safe'; badge.className='tag tag-green'; }
-  } else {
-    if (!silent) {
-      if (el) el.innerHTML = '<div class="tag tag-yellow" style="margin-bottom:8px">⚠️ Anti-Cheat Detected</div><div style="font-size:13px;color:var(--yellow)">'+result.warning+'</div>';
-    }
-    if (badge) { badge.style.display='inline-flex'; badge.textContent='⚠️ Anti-Cheat Active'; badge.className='tag tag-yellow'; }
-    if (!silent) log('⚠️ Anti-cheat detected: ' + result.detected.join(', ') + ' — processes protected');
+  var result = await window.valcrown.checkAntiCheat();
+  if (!result) { if (el) el.innerHTML = '<span style="color:var(--t3)">Could not scan — run as Administrator</span>'; return; }
+  var safe = result.safe !== false;
+  var warning = result.warning || (safe ? 'No anti-cheat detected — safe to boost' : 'Anti-cheat active');
+  var detected = result.detected || [];
+  if (!silent) {
+    if (el) el.innerHTML = safe
+      ? '<div class="tag tag-green" style="margin-bottom:8px">✓ No Anti-Cheat Detected</div><div style="font-size:13px;color:var(--t2)">'+warning+'</div>'
+      : '<div class="tag tag-yellow" style="margin-bottom:8px">⚠️ Anti-Cheat Detected</div><div style="font-size:13px;color:var(--yellow)">'+warning+'</div><div style="font-size:11px;color:var(--t3);margin-top:6px">Detected: '+detected.join(', ')+'</div><div style="font-size:11px;color:var(--t2);margin-top:4px">ValCrown will NOT touch these processes — you are safe.</div>';
   }
+  if (badge) { badge.style.display='inline-flex'; badge.textContent = safe ? '✓ Anti-Cheat Safe' : '⚠️ Anti-Cheat Active'; badge.className = safe ? 'tag tag-green' : 'tag tag-yellow'; }
+  if (!safe && !silent) log('⚠️ Anti-cheat: ' + detected.join(', ') + ' — protected from boost');
+  else if (!silent) log('✅ Anti-cheat scan: Safe');
 }
 
 // ── GAME DETECTION ──────────────────────────────────────────
@@ -1295,6 +1379,10 @@ async function validateSession() {
 }
 
 // ── LOGOUT ──────────────────────────────────────────────────
+function doSignIn() {
+  window.valcrown.store.clear().then(function() { window.location.reload(); });
+}
+
 async function doLogout() {
   try { var rt = await window.valcrown.store.get('refreshToken'); if (rt) await API.logout(rt); } catch(e) {}
   await window.valcrown.store.clear();
