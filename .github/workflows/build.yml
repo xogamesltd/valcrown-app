@@ -4,6 +4,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   build:
     runs-on: windows-latest
@@ -28,10 +31,10 @@ jobs:
           echo "SHORT=$short"     >> $env:GITHUB_OUTPUT
           Write-Host "Version: $version | Tag: $tag"
 
-      - name: Setup Node.js
+      - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Stamp version
         shell: pwsh
