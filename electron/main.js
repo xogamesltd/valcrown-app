@@ -235,7 +235,7 @@ function getSteamInstalledGames() {
 
 
 // ── VERSION LOCK ──────────────────────────────────────────────────────────────
-const GITHUB_RELEASES_URL = 'https://api.github.com/repos/xogamesltd/valcrown-app/releases/latest';
+const GITHUB_RELEASES_URL = 'https://app.valcrown.com/version';
 let versionCheckPassed = false;
 
 async function checkVersionLock() {
