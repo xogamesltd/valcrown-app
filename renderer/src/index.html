@@ -663,9 +663,9 @@ var API = {
   validate: function(vid) { return this.request('POST', '/api/auth/validate', { deviceVid: vid }, true); },
   logout:   function(rt)  { return this.request('POST', '/api/auth/logout',   { refreshToken: rt }, true); },
   checkProcess:    function(name, cpu, ram) { return this.request('POST', '/api/config/process-check',    { processName: name, cpuUsage: cpu, ramUsage: ram }, true); },
-  diagnoseNetwork: function(ping, loss, isp, jitter) { return this.request('POST', '/api/config/network-diagnosis', { pingMs: ping, packetLoss: loss, isp: isp, jitter: jitter }, true); },
-  getBoostAdvice:  function(stats) { return this.request('POST', '/api/config/boost-advice', { systemStats: stats }, true); },
-  askFAQ:          function(q)     { return this.request('POST', '/api/config/faq', { question: q }, true); }
+  diagnoseNetwork: function(ping, loss, isp, jitter) { return this.request('POST', '/api/ai/network', { pingMs: ping, packetLoss: loss, isp: isp, jitter: jitter }, true); },
+  getBoostAdvice:  function(stats) { return this.request('POST', '/api/ai/boost-advice', { systemStats: stats }, true); },
+  askFAQ:          function(q)     { return this.request('POST', '/api/ai/ask', { question: q }, true); }
 };
 </script>
 
@@ -676,9 +676,25 @@ var API = {
 var DeviceID = {
   async get() {
     try {
+      // Try real machine fingerprint from IPC first
+      if (window.valcrown.getDeviceVid) {
+        var vid = await window.valcrown.getDeviceVid();
+        if (vid && vid.length > 5) {
+          await window.valcrown.store.set('deviceId', vid);
+          return vid;
+        }
+      }
+      // Fallback: stored ID
       var stored = await window.valcrown.store.get('deviceId');
-      if (stored) return stored;
-      var id = 'APP-' + Math.random().toString(36).substr(2,9).toUpperCase();
+      if (stored && stored.length > 5) return stored;
+      // Last resort: generate stable ID from browser fingerprint
+      var canvas = document.createElement('canvas');
+      var ctx = canvas.getContext('2d');
+      ctx.textBaseline = 'top';
+      ctx.font = '14px Arial';
+      ctx.fillText('ValCrown', 2, 2);
+      var fp = canvas.toDataURL().slice(-20).replace(/[^a-zA-Z0-9]/g,'');
+      var id = 'APP-' + (navigator.hardwareConcurrency||4) + '-' + (screen.width||1920) + '-' + fp.slice(0,8).toUpperCase();
       await window.valcrown.store.set('deviceId', id);
       return id;
     } catch(e) { return 'APP-DEFAULT'; }
