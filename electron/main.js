@@ -696,6 +696,24 @@ ipcMain.handle('get-version',        () => app.getVersion());
     return result;
   });
 
-ipcMain.on('open-external',          (_, url) => shell.openExternal(url));
+ipcMain.on('open-external', (_, url) => {
+  // Security: only allow safe URLs
+  try {
+    const parsed = new URL(url);
+    const allowed = ['https:', 'http:', 'mailto:'];
+    if (!allowed.includes(parsed.protocol)) {
+      log('[Security] Blocked unsafe URL: ' + url);
+      return;
+    }
+    const trustedDomains = ['valcrown.com', 'github.com', 'stripe.com', 'xogamesltd.com'];
+    const isTrusted = trustedDomains.some(d => parsed.hostname.endsWith(d));
+    if (!isTrusted && parsed.protocol !== 'mailto:') {
+      log('[Security] Warning: opening untrusted URL: ' + parsed.hostname);
+    }
+    shell.openExternal(url);
+  } catch(e) {
+    log('[Security] Invalid URL blocked: ' + url);
+  }
+});
 ipcMain.on('show-notification',      (_, { title, body }) => showNotif(title, body));
 ipcMain.on('update-tray',            (_, game) => updateTray(game));
