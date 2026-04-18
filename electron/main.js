@@ -293,7 +293,7 @@ function showUpdateLockScreen(mainWin, latest) {
           <strong style="color:#ffb74d">v${latest}</strong> is now available.
         </p>
         <p style="color:#ff4f4f;font-size:12px;margin:0 0 24px;text-align:center">For your security, please update to continue.</p>
-        <a href="https://valcrown.com/download.html" style="background:linear-gradient(135deg,#7c6aff,#a89fff);color:#fff;padding:13px 28px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;margin-bottom:12px" onclick="require('electron').shell.openExternal('https://valcrown.com/download.html');return false">
+        <a href="https://valcrown.com/download.html" style="background:linear-gradient(135deg,#7c6aff,#a89fff);color:#fff;padding:13px 28px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;margin-bottom:12px" onclick="window.valcrown.openExternal('https://valcrown.com/download.html');return false">
           Download v${latest} →
         </a>
         <p style="color:#505080;font-size:11px;margin:0">ValCrown will work again after updating</p>

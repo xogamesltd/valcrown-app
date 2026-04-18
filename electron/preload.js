@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('valcrown', {
 
   // Network
   pingHost:         (host) => ipcRenderer.invoke('ping-host', host),
+  getPing:          () => ipcRenderer.invoke('ping-host', '8.8.8.8'),
   flushDns:         () => ipcRenderer.invoke('flush-dns'),
   optimizeTcp:      () => ipcRenderer.invoke('optimize-tcp'),
   setDns:           (p, s) => ipcRenderer.invoke('set-dns', p, s),

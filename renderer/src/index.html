@@ -723,84 +723,84 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
     </div>
 
     <script>
-    async function copyLicenseKey() {
-      const key = document.getElementById('s-license-key').textContent;
-      if (key && key !== 'Loading...' && key !== 'N/A') {
-        try { await navigator.clipboard.writeText(key); } catch(e) {}
-        const btn = event.target;
-        btn.textContent = 'Copied!';
-        setTimeout(() => btn.textContent = 'Copy', 1500);
-      }
+async function copyLicenseKey() {
+  const key = document.getElementById('s-license-key').textContent;
+  if (key && key !== 'Loading...' && key !== 'N/A') {
+    try { await navigator.clipboard.writeText(key); } catch(e) {}
+    const btn = event.target;
+    btn.textContent = 'Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  }
+}
+
+async function checkForUpdatesUI() {
+  const btn = document.getElementById('check-update-btn');
+  const status = document.getElementById('update-status');
+  btn.textContent = 'Checking...';
+  btn.disabled = true;
+  status.style.display = 'none';
+  try {
+    const result = await window.valcrown.checkForUpdates();
+    status.style.display = 'block';
+    if (result.isOutdated) {
+      status.style.background = 'rgba(255,183,77,0.1)';
+      status.style.border = '1px solid rgba(255,183,77,0.3)';
+      status.style.color = '#ffb74d';
+      status.innerHTML = '⚠️ Update available: v' + result.latest + ' — <a href="#" onclick="window.valcrown.openExternal('https://valcrown.com/download.html');return false" style="color:#7c6aff">Download now</a>';
+    } else {
+      status.style.background = 'rgba(0,232,122,0.1)';
+      status.style.border = '1px solid rgba(0,232,122,0.3)';
+      status.style.color = '#00e87a';
+      status.textContent = '✓ You are on the latest version (v' + result.current + ')';
+    }
+  } catch(e) {
+    status.style.display = 'block';
+    status.style.background = 'rgba(255,79,79,0.1)';
+    status.style.border = '1px solid rgba(255,79,79,0.3)';
+    status.style.color = '#ff4f4f';
+    status.textContent = 'Could not check for updates — check your connection';
+  }
+  btn.textContent = 'Check for Updates';
+  btn.disabled = false;
+}
+
+// Load settings data
+async function loadSettingsPage() {
+  try {
+    const token = await window.valcrown.store.get('accessToken');
+    const email = await window.valcrown.store.get('userEmail');
+    const plan  = await window.valcrown.store.get('userPlan');
+    const licenseKey = await window.valcrown.store.get('licenseKey');
+    const expiresAt = await window.valcrown.store.get('licenseExpiry');
+
+    if (email) {
+      document.getElementById('s-email').textContent = email;
+      document.getElementById('s-avatar').textContent = email.charAt(0).toUpperCase();
+    }
+    if (plan) document.getElementById('s-plan').textContent = plan.charAt(0).toUpperCase() + plan.slice(1) + ' Plan';
+    if (licenseKey) document.getElementById('s-license-key').textContent = licenseKey;
+    else document.getElementById('s-license-key').textContent = 'N/A';
+
+    if (expiresAt) {
+      const exp = new Date(expiresAt);
+      const now = new Date();
+      const days = Math.ceil((exp - now) / 86400000);
+      document.getElementById('s-expiry').textContent = days > 0 ? exp.toLocaleDateString() + ' (' + days + ' days left)' : 'Expired';
+    } else {
+      document.getElementById('s-expiry').textContent = plan === 'lifetime' ? 'Never — Lifetime License' : 'N/A';
     }
 
-    async function checkForUpdatesUI() {
-      const btn = document.getElementById('check-update-btn');
-      const status = document.getElementById('update-status');
-      btn.textContent = 'Checking...';
-      btn.disabled = true;
-      status.style.display = 'none';
-      try {
-        const result = await window.valcrown.checkForUpdates();
-        status.style.display = 'block';
-        if (result.isOutdated) {
-          status.style.background = 'rgba(255,183,77,0.1)';
-          status.style.border = '1px solid rgba(255,183,77,0.3)';
-          status.style.color = '#ffb74d';
-          status.innerHTML = '⚠️ Update available: v' + result.latest + ' — <a href="#" onclick="window.valcrown.openExternal('https://valcrown.com/download.html');return false" style="color:#7c6aff">Download now</a>';
-        } else {
-          status.style.background = 'rgba(0,232,122,0.1)';
-          status.style.border = '1px solid rgba(0,232,122,0.3)';
-          status.style.color = '#00e87a';
-          status.textContent = '✓ You are on the latest version (v' + result.current + ')';
-        }
-      } catch(e) {
-        status.style.display = 'block';
-        status.style.background = 'rgba(255,79,79,0.1)';
-        status.style.border = '1px solid rgba(255,79,79,0.3)';
-        status.style.color = '#ff4f4f';
-        status.textContent = 'Could not check for updates — check your connection';
-      }
-      btn.textContent = 'Check for Updates';
-      btn.disabled = false;
+    const v = await window.valcrown.getVersion();
+    if (v) {
+      document.getElementById('s-version').textContent = 'v' + v;
+      document.getElementById('s-version-settings').textContent = 'v' + v;
     }
 
-    // Load settings data
-    async function loadSettingsPage() {
-      try {
-        const token = await window.valcrown.store.get('accessToken');
-        const email = await window.valcrown.store.get('userEmail');
-        const plan  = await window.valcrown.store.get('userPlan');
-        const licenseKey = await window.valcrown.store.get('licenseKey');
-        const expiresAt = await window.valcrown.store.get('licenseExpiry');
-
-        if (email) {
-          document.getElementById('s-email').textContent = email;
-          document.getElementById('s-avatar').textContent = email.charAt(0).toUpperCase();
-        }
-        if (plan) document.getElementById('s-plan').textContent = plan.charAt(0).toUpperCase() + plan.slice(1) + ' Plan';
-        if (licenseKey) document.getElementById('s-license-key').textContent = licenseKey;
-        else document.getElementById('s-license-key').textContent = 'N/A';
-
-        if (expiresAt) {
-          const exp = new Date(expiresAt);
-          const now = new Date();
-          const days = Math.ceil((exp - now) / 86400000);
-          document.getElementById('s-expiry').textContent = days > 0 ? exp.toLocaleDateString() + ' (' + days + ' days left)' : 'Expired';
-        } else {
-          document.getElementById('s-expiry').textContent = plan === 'lifetime' ? 'Never — Lifetime License' : 'N/A';
-        }
-
-        const v = await window.valcrown.getVersion();
-        if (v) {
-          document.getElementById('s-version').textContent = 'v' + v;
-          document.getElementById('s-version-settings').textContent = 'v' + v;
-        }
-
-        const startup = await window.valcrown.getStartup();
-        document.getElementById('toggle-startup').checked = !!startup;
-      } catch(e) {}
-    }
-    </script>
+    const startup = await window.valcrown.getStartup();
+    document.getElementById('toggle-startup').checked = !!startup;
+  } catch(e) {}
+}
+</script>
     </div>
 
   </div><!-- /main -->
@@ -1514,7 +1514,7 @@ async function runSystemScan() {
     const [procs, startup, ping] = await Promise.all([
       window.valcrown.getProcesses().catch(() => []),
       window.valcrown.getStartup().catch(() => false),
-      window.valcrown.getPing ? window.valcrown.getPing().catch(() => null) : Promise.resolve(null),
+      window.valcrown.pingHost('8.8.8.8').catch(() => null),
     ]);
 
     // Analyze problems
