@@ -330,6 +330,7 @@ function startGameDetection() {
         currentGame  = found;
         sessionStart = Date.now();
         applyBoost(found.name);
+        startSessionTick(Date.now());
         mainWindow?.webContents.send('game-detected', found);
         updateTray(found);
         showNotif(`${found.name} Detected`, `Boost activated for ${found.name}`);
@@ -341,6 +342,7 @@ function startGameDetection() {
         mainWindow?.webContents.send('game-ended', session);
         saveSession(session);
         revertBoost();
+      stopSessionTick();
         updateTray(null);
         showNotif('Session Ended', `${currentGame.name} — ${durationMin}m`);
         log(`[Game] Ended: ${currentGame.name} — ${durationMin}m`);
@@ -360,6 +362,19 @@ function saveSession(session) {
   const history = store.get('sessionHistory', []);
   history.unshift({ game: session.game, duration: session.durationFormatted, date: new Date().toLocaleDateString() });
   store.set('sessionHistory', history.slice(0, 20));
+
+  // ── SESSION TICK ─────────────────────────────────────────────────────────
+  let sessionTickInterval = null;
+  function startSessionTick(startTime) {
+    if (sessionTickInterval) clearInterval(sessionTickInterval);
+    sessionTickInterval = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      if (mainWindow) mainWindow.webContents.send('session-tick', elapsed);
+    }, 1000);
+  }
+  function stopSessionTick() {
+    if (sessionTickInterval) { clearInterval(sessionTickInterval); sessionTickInterval = null; }
+  }
 }
 
 // ── BOOST ─────────────────────────────────────────────────────────────────────
@@ -406,6 +421,26 @@ function createTray() {
     else createMainWindow();
   });
 }
+
+
+// ── LICENSE CHECK ON STARTUP ─────────────────────────────────────────────────
+async function checkLicenseValid() {
+  const token = store.get('accessToken');
+  if (!token || token === 'GUEST') return false;
+  try {
+    const https = require('https');
+    return new Promise((resolve) => {
+      const req = https.get(API_URL + '/api/auth/me', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      }, (res) => {
+        resolve(res.statusCode === 200);
+      });
+      req.on('error', () => resolve(true)); // network error — allow offline
+      req.setTimeout(5000, () => { req.destroy(); resolve(true); });
+    });
+  } catch(e) { return true; }
+}
+// ── END LICENSE CHECK ─────────────────────────────────────────────────────────
 
 function updateTray(game) {
   if (!tray) return;

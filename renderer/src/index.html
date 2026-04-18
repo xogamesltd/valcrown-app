@@ -828,7 +828,7 @@ async function loadSettingsPage() {
 // All functions already available via contextBridge
 // This adds Electron-specific event listeners
 // ═══════════════════════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', function() {
+// DOMContentLoaded handled below
   // Wire Electron IPC game events to app handlers
   if (window.valcrown && window.valcrown.onGameDetected) {
     window.valcrown.onGameDetected(function(game) {
@@ -1268,6 +1268,29 @@ function updateBoostUI(active, label) {
 
 
 // ── ANTI-CHEAT ──────────────────────────────────────────────
+
+async function loadSteamGames() {
+  var el = document.getElementById('steam-games-list');
+  if (!el) return;
+  el.innerHTML = '<div style="font-size:12px;color:var(--t3);padding:10px">Scanning Steam library...</div>';
+  try {
+    var games = await window.valcrown.getSteamGames().catch(function(){ return []; });
+    if (!games || games.length === 0) {
+      el.innerHTML = '<div style="font-size:12px;color:var(--t3);padding:10px">No Steam games found or Steam not installed.</div>';
+      return;
+    }
+    el.innerHTML = games.slice(0,20).map(function(g) {
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border)">' +
+        '<span style="font-size:12px;color:var(--t1)">' + sanitize(g.name || g) + '</span>' +
+        '<button class="btn btn-ghost btn-sm" onclick="setQuickApp(\'' + sanitize(g.exe || '') + '\')" style="font-size:11px;padding:2px 8px">Set Target</button>' +
+        '</div>';
+    }).join('') + (games.length > 20 ? '<div style="font-size:11px;color:var(--t3);padding:6px 0">+' + (games.length-20) + ' more games</div>' : '');
+    log('🎮 Found ' + games.length + ' Steam games');
+  } catch(e) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--t3)">Steam scan failed: ' + sanitize(e.message) + '</div>';
+  }
+}
+
 async function checkAntiCheat(silent) {
   var el = document.getElementById('anticheat-result');
   var badge = document.getElementById('anticheat-badge');
