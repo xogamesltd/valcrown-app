@@ -280,6 +280,23 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
 .scan-stat-val{font-size:22px;font-weight:900;letter-spacing:-1px}
 .scan-stat-lbl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-top:2px}
 
+
+.fix-btn-wrap{text-align:center;padding:8px 0 4px}
+.fix-btn-main{background:linear-gradient(135deg,#00e87a,#00c060);color:#000;border:none;padding:18px 48px;border-radius:16px;font-size:18px;font-weight:900;cursor:pointer;font-family:var(--f);transition:.2s;letter-spacing:-.3px;width:100%;position:relative;overflow:hidden}
+.fix-btn-main::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.1),transparent);pointer-events:none}
+.fix-btn-main:hover{transform:translateY(-2px);box-shadow:0 10px 32px rgba(0,232,122,.4)}
+.fix-btn-main:disabled{opacity:.6;transform:none;cursor:not-allowed;background:var(--bg3);color:var(--t2)}
+.fix-btn-main.active{background:linear-gradient(135deg,#ff4f4f,#cc0000);color:#fff}
+.fix-status{font-size:12px;color:var(--t3);text-align:center;margin-top:8px;min-height:18px}
+.fix-checklist{display:flex;flex-direction:column;gap:6px;margin-top:12px}
+.fix-check{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--t2);padding:6px 10px;background:var(--bg2);border-radius:7px;border:1px solid var(--border);transition:.3s}
+.fix-check.done{background:rgba(0,232,122,0.08);border-color:rgba(0,232,122,0.25);color:#00e87a}
+.fix-check.active{background:rgba(124,106,255,0.1);border-color:rgba(124,106,255,0.3)}
+.fix-check-ico{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;transition:.3s}
+.fix-check.done .fix-check-ico{background:#00e87a;border-color:#00e87a;color:#000}
+.fix-check.active .fix-check-ico{border-color:#7c6aff;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 </style>
 </head>
 <body>
@@ -379,7 +396,24 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
       </div>
 
       <!-- Game Detection -->
-      <div class="game-card" id="game-card">
+      <!-- FIX MY GAME — MAIN CTA -->
+      <div class="card" style="margin-bottom:12px" id="fix-card">
+        <div class="fix-btn-wrap">
+          <button class="fix-btn-main" id="fix-main-btn" onclick="fixMyGame()">
+            ⚡ Fix My Game Performance
+          </button>
+          <div class="fix-status" id="fix-status">Optimizes CPU priority, power plan, Game DVR and more</div>
+        </div>
+        <div class="fix-checklist" id="fix-checklist" style="display:none">
+          <div class="fix-check" id="fc-power"><div class="fix-check-ico">○</div><span>Setting High Performance power plan</span></div>
+          <div class="fix-check" id="fc-priority"><div class="fix-check-ico">○</div><span>Boosting game CPU priority</span></div>
+          <div class="fix-check" id="fc-dvr"><div class="fix-check-ico">○</div><span>Disabling Xbox Game DVR</span></div>
+          <div class="fix-check" id="fc-timer"><div class="fix-check-ico">○</div><span>Optimizing Windows timer resolution</span></div>
+          <div class="fix-check" id="fc-ram"><div class="fix-check-ico">○</div><span>Cleaning unused RAM</span></div>
+        </div>
+      </div>
+
+            <div class="game-card" id="game-card">
         <div class="gc-icon" id="gc-icon">🎮</div>
         <div style="flex:1">
           <div style="font-size:10px;font-weight:700;color:var(--ac);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px"><span class="live-dot"></span>&nbsp;ValCrown is boosting</div>
@@ -1352,6 +1386,78 @@ function showTargetApp(app) {
 }
 
 
+
+
+let fixActive = false;
+
+async function fixMyGame() {
+  const btn = document.getElementById('fix-main-btn');
+  const status = document.getElementById('fix-status');
+  const checklist = document.getElementById('fix-checklist');
+
+  if (fixActive) {
+    // Revert
+    btn.disabled = true;
+    btn.textContent = '↩️ Reverting...';
+    try {
+      await window.valcrown.revertBoost();
+      fixActive = false;
+      btn.className = 'fix-btn-main';
+      btn.textContent = '⚡ Fix My Game Performance';
+      status.textContent = 'All optimizations reverted — system restored to normal';
+      checklist.style.display = 'none';
+      document.querySelectorAll('.fix-check').forEach(c => { c.className = 'fix-check'; c.querySelector('.fix-check-ico').textContent = '○'; });
+    } catch(e) {}
+    btn.disabled = false;
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Fixing...';
+  checklist.style.display = 'flex';
+
+  const steps = [
+    { id: 'fc-power',    delay: 400,  label: '✓' },
+    { id: 'fc-priority', delay: 800,  label: '✓' },
+    { id: 'fc-dvr',      delay: 1200, label: '✓' },
+    { id: 'fc-timer',    delay: 1600, label: '✓' },
+    { id: 'fc-ram',      delay: 2000, label: '✓' },
+  ];
+
+  // Animate steps
+  steps.forEach(s => {
+    const el = document.getElementById(s.id);
+    if (el) {
+      el.className = 'fix-check active';
+      el.querySelector('.fix-check-ico').textContent = '↻';
+    }
+    setTimeout(() => {
+      const el2 = document.getElementById(s.id);
+      if (el2) {
+        el2.className = 'fix-check done';
+        el2.querySelector('.fix-check-ico').textContent = s.label;
+      }
+    }, s.delay);
+  });
+
+  try {
+    await window.valcrown.applyBoost(currentGame?.name || null, boostMode || 'safe');
+    fixActive = true;
+
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.className = 'fix-btn-main active';
+      btn.textContent = '✓ Optimized — Click to Revert';
+      status.textContent = '🟢 All optimizations active — close your game to auto-revert';
+    }, 2200);
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '⚡ Fix My Game Performance';
+    status.textContent = 'Fix failed — try running as Administrator';
+    checklist.style.display = 'none';
+  }
+}
 
 async function runSystemScan() {
   const btn = document.getElementById('scan-btn');
