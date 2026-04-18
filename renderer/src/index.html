@@ -264,10 +264,7 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
     </div>
     <div class="nav-section">
       <div class="nav-label">Tools</div>
-      <button class="nav-btn" onclick="go('ai')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        AI Advisor
-      </button>
+      
       <button class="nav-btn" onclick="go('settings')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         Settings
@@ -527,31 +524,6 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
     </div>
 
     <!-- AI ADVISOR -->
-    <div id="pg-ai" class="page">
-      <div class="ph"><div><div class="ph-title">AI Advisor</div><div class="ph-sub">Claude Sonnet powered gaming assistant</div></div></div>
-      <div class="card">
-        <div class="card-head">Ask Anything</div>
-        <div class="chat-wrap" id="chat-box">
-          <div class="msg ai">Hi! I'm ValCrown AI. Ask me anything about optimizing your PC, reducing lag, fixing network issues, or gaming performance.</div>
-        </div>
-        <div class="chat-row">
-          <input class="chat-inp" id="chat-in" placeholder="e.g. Why is my ping high? How do I boost Valorant?" onkeypress="if(event.key==='Enter')sendMsg()"/>
-          <button class="btn btn-primary" onclick="sendMsg()">Send</button>
-        </div>
-      </div>
-      <div class="g3">
-        <button class="btn btn-ghost" onclick="askPreset('How do I reduce ping in cloud gaming?')" style="height:auto;padding:10px;flex-direction:column;gap:4px">
-          <span style="font-size:16px">📡</span><span style="font-size:11px">Reduce Ping</span>
-        </button>
-        <button class="btn btn-ghost" onclick="askPreset('Why is my FPS dropping in games?')" style="height:auto;padding:10px;flex-direction:column;gap:4px">
-          <span style="font-size:16px">📉</span><span style="font-size:11px">Fix FPS Drops</span>
-        </button>
-        <button class="btn btn-ghost" onclick="askPreset('What processes should I kill for better gaming?')" style="height:auto;padding:10px;flex-direction:column;gap:4px">
-          <span style="font-size:16px">💀</span><span style="font-size:11px">Kill Bloat</span>
-        </button>
-      </div>
-    </div>
-
     <!-- SETTINGS -->
     <div id="pg-settings" class="page">
       <div class="ph"><div><div class="ph-title">Settings</div><div class="ph-sub">Account and preferences</div></div></div>
@@ -662,10 +634,6 @@ var API = {
   },
   validate: function(vid) { return this.request('POST', '/api/auth/validate', { deviceVid: vid }, true); },
   logout:   function(rt)  { return this.request('POST', '/api/auth/logout',   { refreshToken: rt }, true); },
-  checkProcess:    function(name, cpu, ram) { return this.request('POST', '/api/config/process-check',    { processName: name, cpuUsage: cpu, ramUsage: ram }, true); },
-  diagnoseNetwork: function(ping, loss, isp, jitter) { return this.request('POST', '/api/ai/network', { pingMs: ping, packetLoss: loss, isp: isp, jitter: jitter }, true); },
-  getBoostAdvice:  function(stats) { return this.request('POST', '/api/ai/boost-advice', { systemStats: stats }, true); },
-  askFAQ:          function(q)     { return this.request('POST', '/api/ai/ask', { question: q }, true); }
 };
 </script>
 
@@ -1036,54 +1004,7 @@ function updateBoostUI(active, label) {
 }
 
 // ── BOOST ADVICE ────────────────────────────────────────────
-async function getBoostAdvice() {
-  var el = document.getElementById('boost-advice');
-  if (el) el.innerHTML = '<div style="display:flex;align-items:center;gap:8px"><span class="spin"></span><span style="color:var(--t2);font-size:13px">AI analyzing your system...</span></div>';
 
-  // Check if guest
-  var isGuest = false;
-  try { isGuest = await window.valcrown.isGuest(); } catch(e) {}
-  if (isGuest) {
-    if (el) el.innerHTML = '<div style="text-align:center;padding:16px"><div style="font-size:20px;margin-bottom:8px">🔒</div><div style="font-size:13px;color:var(--t2)">AI features require an account.</div><div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="doSignIn()">Sign In Free</button></div></div>';
-    return;
-  }
-
-  var result = await API.getBoostAdvice({
-    cpuPercent:   Math.round(lastCpu),
-    ramPercent:   Math.round(lastRam),
-    pingMs:       lastPing,
-    processCount: 60,
-    boostMode:    boostMode,
-    game:         (currentGame && currentGame.name) || (targetApp && targetApp.name) || 'cloud gaming'
-  });
-
-  if (result.ok && result.data) {
-    var d = result.data;
-    var level  = d.level || d.boost_level || d.recommendation_level || 'medium';
-    var reason = d.reason || d.recommendation || d.advice || d.message || 'Apply boost for better performance.';
-    var color  = level === 'conservative' || level === 'low'
-      ? 'var(--green)' : level === 'medium' ? 'var(--yellow)' : 'var(--red)';
-    if (el) el.innerHTML =
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
-      + '<span class="tag" style="background:'+color+'22;color:'+color+';font-size:11px">'+level.toUpperCase()+'</span>'
-      + '<span style="font-size:11px;color:var(--t3)">AI Recommendation · CPU '+Math.round(lastCpu)+'% · RAM '+Math.round(lastRam)+'%</span></div>'
-      + '<div style="font-size:13px;color:var(--t1);line-height:1.6;margin-bottom:12px">'+reason+'</div>'
-      + '<div style="display:flex;gap:8px">'
-      + '<button class="btn btn-primary btn-sm" onclick="if(!boostActive)toggleBoost()">⚡ Apply Boost</button>'
-      + '<button class="btn btn-ghost btn-sm" onclick="getBoostAdvice()">↻ Re-analyze</button>'
-      + '</div>';
-    log('🤖 AI Boost: ' + level + ' — ' + reason.slice(0, 60) + '...');
-  } else {
-    var errMsg = result.data && result.data.error ? result.data.error : 'AI service unavailable';
-    if (el) el.innerHTML =
-      '<div style="padding:12px;background:var(--red-dim);border:1px solid rgba(255,77,77,0.2);border-radius:var(--r-sm)">'
-      + '<div style="font-size:12px;color:var(--red);margin-bottom:6px">⚠️ AI Unavailable</div>'
-      + '<div style="font-size:11px;color:var(--t2)">'+errMsg+'</div>'
-      + '</div>'
-      + '<div style="margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="getBoostAdvice()">↻ Try Again</button></div>';
-    log('⚠️ AI Boost failed: ' + errMsg);
-  }
-}
 
 // ── ANTI-CHEAT ──────────────────────────────────────────────
 async function checkAntiCheat(silent) {
@@ -1299,54 +1220,9 @@ async function setDns(primary, secondary) {
   else log('⚠️ DNS change failed — run as administrator');
 }
 
-async function doNetDiag() {
-  var el = document.getElementById('net-diag');
-  if (el) el.innerHTML='<span class="spin"></span> Analyzing connection...';
-  var result = await API.diagnoseNetwork(lastPing, 0.5, 'Unknown', 8);
-  if (result.ok && result.data) {
-    var d = result.data;
-    var sev = d.severity || 'low';
-    var tagClass = sev==='low'?'tag-green':sev==='medium'?'tag-yellow':'tag-red';
-    var fixes = (d.fixes||[]).map(function(f) { return '<div style="font-size:12px;color:var(--t2);padding:5px 0;border-bottom:1px solid var(--border)">→ '+f+'</div>'; }).join('');
-    var dns = d.dns_recommendation && d.dns_recommendation!=='current is fine' ? '<div style="margin-top:8px;font-size:12px;color:var(--blue)">💡 Try DNS: '+d.dns_recommendation+'</div>' : '';
-    if (el) el.innerHTML='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span class="tag '+tagClass+'">'+sev.toUpperCase()+'</span><span style="font-size:11px;color:var(--t3)">Ping: '+lastPing+'ms</span></div><div style="font-size:13px;margin-bottom:10px">'+d.diagnosis+'</div>'+fixes+dns;
-    log('🔍 Network: ' + sev + ' — Ping ' + lastPing + 'ms');
-  } else {
-    if (el) el.innerHTML='<span style="color:var(--t2)">AI diagnosis unavailable.</span>';
-  }
-}
 
-// ── AI CHAT ─────────────────────────────────────────────────
-async function sendMsg() {
-  var inp = document.getElementById('chat-in');
-  var q = inp && inp.value.trim();
-  if (!q) return;
-  if (inp) inp.value='';
-  addMsg(q, 'user');
-  var thinking = addMsg('Thinking...', 'ai');
-  var result = await API.askFAQ(q);
-  if (thinking) {
-    thinking.textContent = (result.ok && result.data && result.data.answer) ? result.data.answer : 'AI unavailable — check your internet connection.';
-  }
-}
 
-function addMsg(text, who) {
-  var box = document.getElementById('chat-box');
-  if (!box) return null;
-  var m = document.createElement('div');
-  m.className='msg '+who;
-  m.textContent=text;
-  box.appendChild(m);
-  box.scrollTop=box.scrollHeight;
-  return m;
-}
 
-function askPreset(q) {
-  var inp = document.getElementById('chat-in');
-  if (inp) inp.value = q;
-  go('ai');
-  sendMsg();
-}
 
 // ── STARTUP TOGGLE ──────────────────────────────────────────
 async function toggleStartup(enabled) {
