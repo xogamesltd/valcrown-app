@@ -834,9 +834,9 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-</script>
 
-<script>
+
+
 // ═══════════════════════════════════════════════════════════
 // API SERVICE — all calls to api.valcrown.com
 // ═══════════════════════════════════════════════════════════
@@ -875,9 +875,9 @@ var API = {
   validate: function(vid) { return this.request('POST', '/api/auth/validate', { deviceVid: vid }, true); },
   logout:   function(rt)  { return this.request('POST', '/api/auth/logout',   { refreshToken: rt }, true); },
 };
-</script>
 
-<script>
+
+
 // ═══════════════════════════════════════════════════════════
 // DEVICE ID
 // ═══════════════════════════════════════════════════════════
@@ -908,9 +908,9 @@ var DeviceID = {
     } catch(e) { return 'APP-DEFAULT'; }
   }
 };
-</script>
 
-<script>
+
+
 // ═══════════════════════════════════════════════════════════
 // GAME DATABASE — 200+ games mapped by process name
 // ═══════════════════════════════════════════════════════════
@@ -965,9 +965,9 @@ window.GAME_PROCESS_MAP = {
   'remotepla.exe':{'name':'PS Remote Play','icon':'🕹️','genre':'Cloud Gaming'},
   'luna.exe':{'name':'Amazon Luna','icon':'🌙','genre':'Cloud Gaming'},
 };
-</script>
 
-<script>
+
+
 // ═══════════════════════════════════════════════════════════
 // APP LOGIC — main application
 // ═══════════════════════════════════════════════════════════
@@ -1880,6 +1880,18 @@ function setEl(id, text) { var el=document.getElementById(id); if(el) el.textCon
 function capitalize(s) { return s?s.charAt(0).toUpperCase()+s.slice(1):''; }
 
 // ── START ───────────────────────────────────────────────────
+
+// ── ERROR BOUNDARY ────────────────────────────────────────────────────────────
+window.addEventListener('error', function(e) {
+  console.error('[ValCrown] Unhandled error:', e.message, 'at', e.filename, ':', e.lineno);
+  log('⚠️ Error: ' + e.message);
+});
+window.addEventListener('unhandledrejection', function(e) {
+  console.error('[ValCrown] Unhandled promise rejection:', e.reason);
+  log('⚠️ Async error: ' + (e.reason?.message || String(e.reason)));
+});
+// ── END ERROR BOUNDARY ────────────────────────────────────────────────────────
+
 document.addEventListener('DOMContentLoaded', init);
 </script>
 </body>

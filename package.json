@@ -1,13 +1,9 @@
 {
   "name": "valcrown",
-  "version": "1.0.0",
-  "description": "ValCrown \u2014 Cloud Gaming Optimizer",
+  "version": "1.0.27",
+  "description": "ValCrown \u2014 Windows Game Performance Optimizer",
   "main": "electron/main.js",
-  "author": {
-    "name": "XOGAMESLTD",
-    "email": "buisnessxogamesltd@gmail.com",
-    "url": "https://valcrown.com"
-  },
+  "author": "XOGAMESLTD",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",
@@ -50,5 +46,6 @@
       "deleteAppDataOnUninstall": false,
       "runAfterFinish": true
     }
-  }
+  },
+  "homepage": "https://valcrown.com"
 }

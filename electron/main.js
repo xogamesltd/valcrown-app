@@ -230,7 +230,6 @@ function getSteamInstalledGames() {
 }
 
 // IPC handler to get Steam installed games
-// Add this inside the ipcMain handlers section:
 
 
 
