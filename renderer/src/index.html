@@ -540,6 +540,9 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
       <div class="card">
         <div class="card-head">Boost Status</div>
         <div id="boost-status-detail" style="font-size:13px;color:var(--t2)">Boost not active. Click Activate Boost to optimize your system.</div>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" id="revert-btn" onclick="revertAll()" style="display:none">↩️ Undo All Changes</button>
+        </div>
       </div>
 
       <!-- Before/After Benchmark -->
@@ -1390,6 +1393,27 @@ function showTargetApp(app) {
 
 let fixActive = false;
 
+
+async function revertAll() {
+  const btn = document.getElementById('revert-btn');
+  const fixBtn = document.getElementById('fix-main-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Reverting...'; }
+  try {
+    await window.valcrown.revertBoost();
+    fixActive = false;
+    if (fixBtn) { fixBtn.className = 'fix-btn-main'; fixBtn.textContent = '⚡ Fix My Game Performance'; }
+    const status = document.getElementById('fix-status');
+    if (status) status.textContent = 'All optimizations reverted — system restored to normal';
+    const checklist = document.getElementById('fix-checklist');
+    if (checklist) checklist.style.display = 'none';
+    document.querySelectorAll('.fix-check').forEach(c => { c.className = 'fix-check'; c.querySelector('.fix-check-ico').textContent = '○'; });
+    if (btn) { btn.style.display = 'none'; btn.disabled = false; btn.textContent = '↩️ Undo All Changes'; }
+    document.getElementById('boost-status-detail').textContent = 'All changes reverted — system restored to default.';
+  } catch(e) {
+    if (btn) { btn.disabled = false; btn.textContent = '↩️ Undo All Changes'; }
+  }
+}
+
 async function fixMyGame() {
   const btn = document.getElementById('fix-main-btn');
   const status = document.getElementById('fix-status');
@@ -1448,6 +1472,7 @@ async function fixMyGame() {
       btn.disabled = false;
       btn.className = 'fix-btn-main active';
       btn.textContent = '✓ Optimized — Click to Revert';
+      const rb = document.getElementById('revert-btn'); if (rb) rb.style.display = 'inline-flex';
       status.textContent = '🟢 All optimizations active — close your game to auto-revert';
     }, 2200);
 
