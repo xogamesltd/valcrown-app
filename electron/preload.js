@@ -57,6 +57,7 @@ contextBridge.exposeInMainWorld('valcrown', {
   getCurrentGame:      () => ipcRenderer.invoke('get-current-game'),
   getSessionHistory:   () => ipcRenderer.invoke('get-session-history'),
   getSteamGames:       () => ipcRenderer.invoke('get-steam-games'),
+  checkForUpdates:     () => ipcRenderer.invoke('check-for-updates'),
   onGameDetected:      (cb) => ipcRenderer.on('game-detected', (_, g) => cb(g)),
   onGameEnded:         (cb) => ipcRenderer.on('game-ended',    (_, s) => cb(s)),
   onSessionTick:       (cb) => ipcRenderer.on('session-tick',  (_, t) => cb(t)),

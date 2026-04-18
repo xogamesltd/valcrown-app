@@ -233,6 +233,78 @@ function getSteamInstalledGames() {
 // Add this inside the ipcMain handlers section:
 
 
+
+// ── VERSION LOCK ──────────────────────────────────────────────────────────────
+const GITHUB_RELEASES_URL = 'https://api.github.com/repos/xogamesltd/valcrown-app/releases/latest';
+let versionCheckPassed = false;
+
+async function checkVersionLock() {
+  try {
+    const https = require('https');
+    const currentVersion = app.getVersion();
+
+    return new Promise((resolve) => {
+      const req = https.get(GITHUB_RELEASES_URL, {
+        headers: { 'User-Agent': 'ValCrown/' + currentVersion }
+      }, (res) => {
+        let data = '';
+        res.on('data', chunk => data += chunk);
+        res.on('end', () => {
+          try {
+            const release = JSON.parse(data);
+            const latest = (release.tag_name || '').replace(/^v/, '');
+            const current = currentVersion.replace(/^v/, '');
+            const isOutdated = latest && latest !== current && compareVersions(latest, current) > 0;
+            resolve({ isOutdated, latest, current });
+          } catch(e) {
+            resolve({ isOutdated: false, latest: null, current: currentVersion });
+          }
+        });
+      });
+      req.on('error', () => resolve({ isOutdated: false, latest: null, current: currentVersion }));
+      req.setTimeout(8000, () => { req.destroy(); resolve({ isOutdated: false, latest: null, current: currentVersion }); });
+    });
+  } catch(e) {
+    return { isOutdated: false, latest: null, current: app.getVersion() };
+  }
+}
+
+function compareVersions(a, b) {
+  const pa = a.split('.').map(Number);
+  const pb = b.split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i]||0) > (pb[i]||0)) return 1;
+    if ((pa[i]||0) < (pb[i]||0)) return -1;
+  }
+  return 0;
+}
+
+function showUpdateLockScreen(mainWin, latest) {
+  mainWin.webContents.executeJavaScript(`
+    (function() {
+      if (document.getElementById('vc-update-lock')) return;
+      const overlay = document.createElement('div');
+      overlay.id = 'vc-update-lock';
+      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(7,7,15,0.97);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,sans-serif;backdrop-filter:blur(8px)';
+      overlay.innerHTML = \`
+        <div style="width:44px;height:44px;background:linear-gradient(135deg,#7c6aff,#a89fff);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;margin-bottom:20px">V</div>
+        <h2 style="color:#f0f0ff;font-size:20px;font-weight:800;margin:0 0 10px;letter-spacing:-0.5px">Update Required</h2>
+        <p style="color:#9090c0;font-size:14px;text-align:center;max-width:320px;margin:0 0 8px;line-height:1.6">
+          You are running an outdated version of ValCrown.<br>
+          <strong style="color:#ffb74d">v${latest}</strong> is now available.
+        </p>
+        <p style="color:#ff4f4f;font-size:12px;margin:0 0 24px;text-align:center">For your security, please update to continue.</p>
+        <a href="https://valcrown.com/download.html" style="background:linear-gradient(135deg,#7c6aff,#a89fff);color:#fff;padding:13px 28px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;margin-bottom:12px" onclick="require('electron').shell.openExternal('https://valcrown.com/download.html');return false">
+          Download v${latest} →
+        </a>
+        <p style="color:#505080;font-size:11px;margin:0">ValCrown will work again after updating</p>
+      \`;
+      document.body.appendChild(overlay);
+    })();
+  `).catch(() => {});
+}
+// ── END VERSION LOCK ──────────────────────────────────────────────────────────
+
 // ── GAME DETECTION ────────────────────────────────────────────────────────────
 function startGameDetection() {
   if (gameDetectInterval) clearInterval(gameDetectInterval);
@@ -391,6 +463,15 @@ function createMainWindow() {
   mainWindow.loadFile(path.join(__dirname, '../renderer/src/index.html'));
 
   mainWindow.once('ready-to-show', () => {
+    // Version lock check
+    checkVersionLock().then(({ isOutdated, latest }) => {
+      if (isOutdated && latest) {
+        log('[Version] Outdated: current=' + app.getVersion() + ' latest=' + latest);
+        setTimeout(() => showUpdateLockScreen(mainWindow, latest), 2000);
+      } else {
+        log('[Version] Up to date: ' + app.getVersion());
+      }
+    });
     mainWindow.show();
     if (isDev) mainWindow.webContents.openDevTools();
     if (currentGame) mainWindow.webContents.send('game-detected', currentGame);
@@ -608,6 +689,14 @@ ipcMain.handle('is-guest', () => store.get('accessToken') === 'GUEST');
 
 ipcMain.handle('get-api-url',        () => API_URL);
 ipcMain.handle('get-version',        () => app.getVersion());
+  ipcMain.handle('check-for-updates', async () => {
+    const result = await checkVersionLock();
+    if (result.isOutdated && result.latest) {
+      showUpdateLockScreen(mainWindow, result.latest);
+    }
+    return result;
+  });
+
 ipcMain.on('open-external',          (_, url) => shell.openExternal(url));
 ipcMain.on('show-notification',      (_, { title, body }) => showNotif(title, body));
 ipcMain.on('update-tray',            (_, game) => updateTray(game));
