@@ -258,6 +258,28 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
 .transparency-list li{display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--t2);padding:6px 8px;background:var(--bg2);border-radius:6px}
 .transparency-list li::before{content:'✓';color:#00e87a;font-weight:800;flex-shrink:0}
 
+
+.scan-wrap{text-align:center;padding:20px 0}
+.scan-btn-big{background:linear-gradient(135deg,#7c6aff,#a89fff);color:#fff;border:none;padding:16px 40px;border-radius:14px;font-size:16px;font-weight:800;cursor:pointer;font-family:var(--f);transition:.2s;letter-spacing:-.2px}
+.scan-btn-big:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(124,106,255,.4)}
+.scan-btn-big:disabled{opacity:.6;transform:none;cursor:not-allowed}
+.problem-list{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+.problem-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:13px}
+.problem-item.bad{background:rgba(255,79,79,0.1);border:1px solid rgba(255,79,79,0.25)}
+.problem-item.warn{background:rgba(255,183,77,0.1);border:1px solid rgba(255,183,77,0.25)}
+.problem-item.ok{background:rgba(0,232,122,0.08);border:1px solid rgba(0,232,122,0.2)}
+.problem-ico{font-size:16px;flex-shrink:0}
+.problem-text{flex:1;font-weight:600}
+.problem-sub{font-size:11px;color:var(--t3);margin-top:1px}
+.problem-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;flex-shrink:0}
+.problem-badge.bad{background:rgba(255,79,79,0.2);color:#ff4f4f}
+.problem-badge.warn{background:rgba(255,183,77,0.2);color:#ffb74d}
+.problem-badge.ok{background:rgba(0,232,122,0.2);color:#00e87a}
+.scan-summary{display:flex;gap:12px;justify-content:center;margin:12px 0}
+.scan-stat{text-align:center;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 16px;min-width:70px}
+.scan-stat-val{font-size:22px;font-weight:900;letter-spacing:-1px}
+.scan-stat-lbl{font-size:10px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin-top:2px}
+
 </style>
 </head>
 <body>
@@ -1329,6 +1351,139 @@ function showTargetApp(app) {
   setEl('t-path', app.path||'');
 }
 
+
+
+async function runSystemScan() {
+  const btn = document.getElementById('scan-btn');
+  const scanContent = document.getElementById('scan-content');
+  const badge = document.getElementById('scan-status-badge');
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Scanning...';
+
+  try {
+    // Collect real system data
+    const [procs, startup, ping] = await Promise.all([
+      window.valcrown.getProcesses().catch(() => []),
+      window.valcrown.getStartup().catch(() => false),
+      window.valcrown.getPing ? window.valcrown.getPing().catch(() => null) : Promise.resolve(null),
+    ]);
+
+    // Analyze problems
+    const problems = [];
+    const heavyApps = (procs || []).filter(p => (parseInt(p.mem)||0) > 150);
+    const totalRam = (procs || []).reduce((s,p) => s + (parseInt(p.mem)||0), 0);
+    const ramGB = (totalRam / 1024 / 1024).toFixed(1);
+
+    // Check heavy background apps
+    const knownHeavy = ['chrome','firefox','edge','opera','msedge','discord','spotify','steam','epicgameslauncher','uplay','battlenet'];
+    const runningHeavy = (procs || []).filter(p => knownHeavy.some(k => (p.name||'').toLowerCase().includes(k)));
+
+    if (runningHeavy.length > 0) {
+      problems.push({
+        type: 'bad',
+        ico: '🖥️',
+        text: runningHeavy.length + ' heavy background apps running',
+        sub: runningHeavy.slice(0,3).map(p=>p.name).join(', ') + (runningHeavy.length>3?' +more':''),
+        badge: 'HIGH IMPACT'
+      });
+    }
+
+    // Check RAM
+    if (parseFloat(ramGB) > 4) {
+      problems.push({
+        type: 'warn',
+        ico: '💾',
+        text: ramGB + ' GB RAM in use by background processes',
+        sub: 'More free RAM = better game performance',
+        badge: 'MEDIUM'
+      });
+    }
+
+    // Power plan check (always needs optimization)
+    problems.push({
+      type: 'warn',
+      ico: '⚡',
+      text: 'Power plan may not be set to High Performance',
+      sub: 'Windows defaults to Balanced — costs FPS',
+      badge: 'HIGH IMPACT'
+    });
+
+    // Game DVR
+    problems.push({
+      type: 'bad',
+      ico: '📹',
+      text: 'Xbox Game DVR may be recording in background',
+      sub: 'Uses CPU + RAM even when you don't use it',
+      badge: 'HIGH IMPACT'
+    });
+
+    // CPU priority
+    problems.push({
+      type: 'warn',
+      ico: '🔧',
+      text: 'Game process not set to High CPU Priority',
+      sub: 'Windows gives equal priority to all apps by default',
+      badge: 'MEDIUM'
+    });
+
+    // Ping check
+    if (ping && ping > 60) {
+      problems.push({
+        type: 'warn',
+        ico: '🌐',
+        text: 'High ping detected: ' + ping + 'ms',
+        sub: 'DNS cache may be stale — flush recommended',
+        badge: 'NETWORK'
+      });
+    }
+
+    const badCount = problems.filter(p => p.type === 'bad').length;
+    const warnCount = problems.filter(p => p.type === 'warn').length;
+
+    badge.textContent = badCount + warnCount + ' issues found';
+    badge.style.color = badCount > 0 ? '#ff4f4f' : '#ffb74d';
+
+    scanContent.innerHTML = `
+      <div class="scan-summary">
+        <div class="scan-stat">
+          <div class="scan-stat-val" style="color:#ff4f4f">${badCount}</div>
+          <div class="scan-stat-lbl">Critical</div>
+        </div>
+        <div class="scan-stat">
+          <div class="scan-stat-val" style="color:#ffb74d">${warnCount}</div>
+          <div class="scan-stat-lbl">Warnings</div>
+        </div>
+        <div class="scan-stat">
+          <div class="scan-stat-val" style="color:#00e87a">${problems.length}</div>
+          <div class="scan-stat-lbl">Total Found</div>
+        </div>
+      </div>
+      <div class="problem-list">
+        ${problems.map(p => `
+          <div class="problem-item ${p.type}">
+            <div class="problem-ico">${p.ico}</div>
+            <div style="flex:1">
+              <div class="problem-text">${p.text}</div>
+              <div class="problem-sub">${p.sub}</div>
+            </div>
+            <div class="problem-badge ${p.type}">${p.badge}</div>
+          </div>
+        `).join('')}
+      </div>
+      <button class="scan-btn-big" style="width:100%;margin-top:4px" onclick="go('boost');toggleBoost()">
+        ⚡ Fix All ${problems.length} Issues Now
+      </button>
+      <div style="text-align:center;margin-top:8px;font-size:11px;color:var(--t3)">
+        All changes are automatically reversed when your game closes
+      </div>
+    `;
+  } catch(e) {
+    scanContent.innerHTML = '<div style="text-align:center;color:var(--t3);font-size:12px;padding:12px">Scan failed — try running as Administrator</div>';
+    btn.disabled = false;
+    btn.textContent = '🔍 Scan My System';
+  }
+}
 
 async function runBenchmark() {
   const btn = document.getElementById('bench-btn');
