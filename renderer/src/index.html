@@ -545,6 +545,19 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
         </div>
       </div>
 
+      <!-- What Changed Log -->
+      <div class="card" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div class="card-head" style="margin:0">📋 Change Log</div>
+          <span id="change-log-time" style="font-size:11px;color:var(--t3)">No changes yet</span>
+        </div>
+        <div id="change-log-list">
+          <div style="font-size:12px;color:var(--t3);text-align:center;padding:10px">
+            Activate boost to see what ValCrown changed on your system.
+          </div>
+        </div>
+      </div>
+
       <!-- Before/After Benchmark -->
       <div class="card" style="margin-bottom:12px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -1394,6 +1407,44 @@ function showTargetApp(app) {
 let fixActive = false;
 
 
+
+function updateChangeLog(active) {
+  const list = document.getElementById('change-log-list');
+  const time = document.getElementById('change-log-time');
+  if (!list) return;
+
+  if (!active) {
+    list.innerHTML = '<div style="font-size:12px;color:var(--t3);text-align:center;padding:10px">Activate boost to see what ValCrown changed on your system.</div>';
+    if (time) time.textContent = 'No changes yet';
+    return;
+  }
+
+  const now = new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+  if (time) time.textContent = 'Applied at ' + now;
+
+  const changes = [
+    { ico:'⚡', text:'Power plan', before:'Balanced', after:'High Performance', impact:'high' },
+    { ico:'🔧', text:'CPU priority', before:'Normal', after:'High', impact:'high' },
+    { ico:'📹', text:'Xbox Game DVR', before:'Enabled', after:'Disabled', impact:'medium' },
+    { ico:'⏱️', text:'Timer resolution', before:'Default (15.6ms)', after:'High (0.5ms)', impact:'medium' },
+  ];
+
+  list.innerHTML = changes.map(c => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px">${c.ico}</span>
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:600">${c.text}</div>
+        <div style="font-size:11px;color:var(--t3)">${c.before} → <span style="color:#00e87a;font-weight:700">${c.after}</span></div>
+      </div>
+      <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:${c.impact==='high'?'rgba(0,232,122,0.15)':'rgba(255,183,77,0.15)'};color:${c.impact==='high'?'#00e87a':'#ffb74d'}">${c.impact.toUpperCase()}</span>
+    </div>
+  `).join('') + `
+    <div style="margin-top:8px;padding:8px 10px;background:rgba(0,232,122,0.07);border:1px solid rgba(0,232,122,0.2);border-radius:7px;font-size:11px;color:#00e87a;text-align:center">
+      ✓ All changes will auto-revert when your game closes
+    </div>
+  `;
+}
+
 async function revertAll() {
   const btn = document.getElementById('revert-btn');
   const fixBtn = document.getElementById('fix-main-btn');
@@ -1473,6 +1524,7 @@ async function fixMyGame() {
       btn.className = 'fix-btn-main active';
       btn.textContent = '✓ Optimized — Click to Revert';
       const rb = document.getElementById('revert-btn'); if (rb) rb.style.display = 'inline-flex';
+      updateChangeLog(true);
       status.textContent = '🟢 All optimizations active — close your game to auto-revert';
     }, 2200);
 
