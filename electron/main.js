@@ -53,35 +53,187 @@ const PROTECTED = new Set([
   'taskmgr.exe','valcrown.exe'
 ]);
 
-// ── GAME DATABASE ─────────────────────────────────────────────────────────────
+// ── STEAM API INTEGRATION + EXPANDED GAME MAP ─────────────────────────────────
+// Drop-in replacement for the GAME_MAP and game detection section in main.js
+
 const GAME_MAP = {
-  'valorant.exe':      { name:'Valorant',      icon:'🎯', genre:'FPS' },
-  'csgo.exe':          { name:'CS:GO',          icon:'🔫', genre:'FPS' },
-  'cs2.exe':           { name:'CS2',            icon:'🔫', genre:'FPS' },
-  'fortnite.exe':      { name:'Fortnite',       icon:'🏗️', genre:'Battle Royale' },
+  // FPS
+  'valorant.exe':      { name:'Valorant',        icon:'🎯', genre:'FPS' },
+  'csgo.exe':          { name:'CS:GO',            icon:'🔫', genre:'FPS' },
+  'cs2.exe':           { name:'CS2',              icon:'🔫', genre:'FPS' },
+  'overwatch.exe':     { name:'Overwatch 2',      icon:'⚡', genre:'FPS' },
+  'overwatch2.exe':    { name:'Overwatch 2',      icon:'⚡', genre:'FPS' },
+  'destiny2.exe':      { name:'Destiny 2',        icon:'🌌', genre:'FPS' },
+  'rainbow6.exe':      { name:'Rainbow Six Siege',icon:'🔰', genre:'FPS' },
+  'thefinals.exe':     { name:'The Finals',       icon:'🏆', genre:'FPS' },
+  'paladins.exe':      { name:'Paladins',         icon:'🛡️', genre:'FPS' },
+  'splitgate.exe':     { name:'Splitgate',        icon:'🌀', genre:'FPS' },
+  'xdefiant.exe':      { name:'XDefiant',         icon:'🎯', genre:'FPS' },
+  'battlebit.exe':     { name:'BattleBit',        icon:'🔫', genre:'FPS' },
+  'insurgency.exe':    { name:'Insurgency',       icon:'🔫', genre:'FPS' },
+  'warface.exe':       { name:'Warface',          icon:'🎖️', genre:'FPS' },
+  'contractorsvr.exe': { name:'Contractors VR',   icon:'🥽', genre:'FPS' },
+
+  // Battle Royale
+  'fortnite.exe':      { name:'Fortnite',         icon:'🏗️', genre:'Battle Royale' },
   'fortniteclient-win64-shipping.exe': { name:'Fortnite', icon:'🏗️', genre:'Battle Royale' },
-  'r5apex.exe':        { name:'Apex Legends',   icon:'🦾', genre:'Battle Royale' },
-  'gta5.exe':          { name:'GTA V',          icon:'🚗', genre:'Action' },
-  'rdr2.exe':          { name:'RDR2',           icon:'🤠', genre:'Action' },
-  'rocketleague.exe':  { name:'Rocket League',  icon:'🚀', genre:'Sports' },
-  'overwatch.exe':     { name:'Overwatch 2',    icon:'⚡', genre:'FPS' },
-  'overwatch2.exe':    { name:'Overwatch 2',    icon:'⚡', genre:'FPS' },
-  'destiny2.exe':      { name:'Destiny 2',      icon:'🌌', genre:'FPS' },
-  'eldenring.exe':     { name:'Elden Ring',     icon:'⚔️', genre:'RPG' },
-  'cyberpunk2077.exe': { name:'Cyberpunk 2077', icon:'🌆', genre:'RPG' },
-  'minecraft.exe':     { name:'Minecraft',      icon:'⛏️', genre:'Sandbox' },
-  'javaw.exe':         { name:'Minecraft',      icon:'⛏️', genre:'Sandbox' },
-  'leagueclient.exe':  { name:'League of Legends', icon:'⚔️', genre:'MOBA' },
+  'r5apex.exe':        { name:'Apex Legends',     icon:'🦾', genre:'Battle Royale' },
+  'pubg.exe':          { name:'PUBG',             icon:'🎯', genre:'Battle Royale' },
+  'tslgame.exe':       { name:'PUBG',             icon:'🎯', genre:'Battle Royale' },
+  'warzone.exe':       { name:'Warzone',          icon:'🎖️', genre:'Battle Royale' },
+  'modernwarfare.exe': { name:'Call of Duty',     icon:'🎖️', genre:'Battle Royale' },
+  'cod.exe':           { name:'Call of Duty',     icon:'🎖️', genre:'Battle Royale' },
+  'codmw.exe':         { name:'MW3',              icon:'🎖️', genre:'Battle Royale' },
+  'hunt.exe':          { name:'Hunt Showdown',    icon:'🏹', genre:'Battle Royale' },
+  'super people.exe':  { name:'Super People',     icon:'🦸', genre:'Battle Royale' },
+  'naraka.exe':        { name:'Naraka Bladepoint',icon:'⚔️', genre:'Battle Royale' },
+  'darkzone.exe':      { name:'The Division 2',   icon:'🛡️', genre:'Battle Royale' },
+
+  // MOBA
+  'leagueclient.exe':  { name:'League of Legends',icon:'⚔️', genre:'MOBA' },
   'league of legends.exe': { name:'League of Legends', icon:'⚔️', genre:'MOBA' },
-  'dota2.exe':         { name:'Dota 2',         icon:'🛡️', genre:'MOBA' },
-  'pubg.exe':          { name:'PUBG',           icon:'🎯', genre:'Battle Royale' },
-  'tslgame.exe':       { name:'PUBG',           icon:'🎯', genre:'Battle Royale' },
-  'warzone.exe':       { name:'Warzone',        icon:'🎖️', genre:'Battle Royale' },
-  'rainbow6.exe':      { name:'Rainbow Six',    icon:'🔰', genre:'FPS' },
-  'thefinals.exe':     { name:'The Finals',     icon:'🏆', genre:'FPS' },
-  'geforcenow.exe':    { name:'GeForce NOW',    icon:'☁️', genre:'Cloud Gaming' },
-  'shadow.exe':        { name:'Shadow PC',      icon:'👤', genre:'Cloud Gaming' },
+  'dota2.exe':         { name:'Dota 2',           icon:'🛡️', genre:'MOBA' },
+  'smite.exe':         { name:'Smite',            icon:'⚡', genre:'MOBA' },
+  'heroesofthestorm.exe': { name:'Heroes of the Storm', icon:'🌩️', genre:'MOBA' },
+
+  // Sports
+  'rocketleague.exe':  { name:'Rocket League',    icon:'🚀', genre:'Sports' },
+  'fifa23.exe':        { name:'FIFA 23',          icon:'⚽', genre:'Sports' },
+  'fifa24.exe':        { name:'EA FC 24',         icon:'⚽', genre:'Sports' },
+  'eafc25.exe':        { name:'EA FC 25',         icon:'⚽', genre:'Sports' },
+  'nba2k24.exe':       { name:'NBA 2K24',         icon:'🏀', genre:'Sports' },
+  'nba2k25.exe':       { name:'NBA 2K25',         icon:'🏀', genre:'Sports' },
+  'f12023.exe':        { name:'F1 2023',          icon:'🏎️', genre:'Sports' },
+  'f12024.exe':        { name:'F1 24',            icon:'🏎️', genre:'Sports' },
+
+  // Action / Open World
+  'gta5.exe':          { name:'GTA V',            icon:'🚗', genre:'Action' },
+  'rdr2.exe':          { name:'RDR2',             icon:'🤠', genre:'Action' },
+  'cyberpunk2077.exe': { name:'Cyberpunk 2077',   icon:'🌆', genre:'Action' },
+  'eldenring.exe':     { name:'Elden Ring',       icon:'⚔️', genre:'Action' },
+  'sekiro.exe':        { name:'Sekiro',           icon:'🗡️', genre:'Action' },
+  'darksouls3.exe':    { name:'Dark Souls III',   icon:'💀', genre:'Action' },
+  'witcher3.exe':      { name:'The Witcher 3',    icon:'🐺', genre:'RPG' },
+  'assassinscreed.exe':{ name:'Assassins Creed',  icon:'🗡️', genre:'Action' },
+  'spiderman.exe':     { name:'Spider-Man PC',    icon:'🕷️', genre:'Action' },
+  'godofwar.exe':      { name:'God of War',       icon:'🪓', genre:'Action' },
+
+  // RPG
+  'baldursgate3.exe':  { name:'Baldurs Gate 3',   icon:'🎲', genre:'RPG' },
+  'pathofexile.exe':   { name:'Path of Exile',    icon:'💎', genre:'RPG' },
+  'diablo4.exe':       { name:'Diablo IV',        icon:'👹', genre:'RPG' },
+  'diablo3.exe':       { name:'Diablo III',       icon:'👹', genre:'RPG' },
+  'skyrim.exe':        { name:'Skyrim',           icon:'🏔️', genre:'RPG' },
+  'starfield.exe':     { name:'Starfield',        icon:'🚀', genre:'RPG' },
+  'finalfantasy14.exe':{ name:'FFXIV',            icon:'⚔️', genre:'RPG' },
+  'ffxiv_dx11.exe':    { name:'FFXIV',            icon:'⚔️', genre:'RPG' },
+  'worldofwarcraft.exe':{ name:'World of Warcraft',icon:'🧙', genre:'RPG' },
+  'wow.exe':           { name:'World of Warcraft',icon:'🧙', genre:'RPG' },
+
+  // Survival / Sandbox
+  'minecraft.exe':     { name:'Minecraft',        icon:'⛏️', genre:'Sandbox' },
+  'javaw.exe':         { name:'Minecraft',        icon:'⛏️', genre:'Sandbox' },
+  'rust.exe':          { name:'Rust',             icon:'🔩', genre:'Survival' },
+  'valheim.exe':       { name:'Valheim',          icon:'🪓', genre:'Survival' },
+  'ark.exe':           { name:'ARK',              icon:'🦕', genre:'Survival' },
+  'satisfactory.exe':  { name:'Satisfactory',     icon:'🏭', genre:'Sandbox' },
+  'terraria.exe':      { name:'Terraria',         icon:'🌍', genre:'Sandbox' },
+  'subnautica.exe':    { name:'Subnautica',       icon:'🌊', genre:'Survival' },
+  'thelongdark.exe':   { name:'The Long Dark',    icon:'❄️', genre:'Survival' },
+  'dontstarve.exe':    { name:"Don't Starve",     icon:'🕯️', genre:'Survival' },
+
+  // Strategy
+  'ageofempires4.exe': { name:'Age of Empires IV',icon:'⚔️', genre:'Strategy' },
+  'stellaris.exe':     { name:'Stellaris',        icon:'🌌', genre:'Strategy' },
+  'civilization6.exe': { name:'Civ VI',           icon:'🏛️', genre:'Strategy' },
+  'totalwar.exe':      { name:'Total War',        icon:'⚔️', genre:'Strategy' },
+  'hoi4.exe':          { name:'Hearts of Iron IV',icon:'🗺️', genre:'Strategy' },
+  'eu4.exe':           { name:'EU4',              icon:'🗺️', genre:'Strategy' },
+
+  // Cloud Gaming
+  'geforcenow.exe':    { name:'GeForce NOW',      icon:'☁️', genre:'Cloud Gaming' },
+  'shadow.exe':        { name:'Shadow PC',        icon:'👤', genre:'Cloud Gaming' },
+  'xboxapp.exe':       { name:'Xbox Cloud Gaming',icon:'🎮', genre:'Cloud Gaming' },
+  'xboxpcapp.exe':     { name:'Xbox Cloud Gaming',icon:'🎮', genre:'Cloud Gaming' },
+  'amazonluna.exe':    { name:'Amazon Luna',      icon:'🌙', genre:'Cloud Gaming' },
+  'boosteroidlauncher.exe': { name:'Boosteroid', icon:'🚀', genre:'Cloud Gaming' },
+
+  // Other Popular
+  'among us.exe':      { name:'Among Us',         icon:'👾', genre:'Party' },
+  'fallguys.exe':      { name:'Fall Guys',        icon:'🏆', genre:'Party' },
+  'deadbydaylight.exe':{ name:'Dead by Daylight', icon:'💀', genre:'Horror' },
+  'phasmo.exe':        { name:'Phasmophobia',     icon:'👻', genre:'Horror' },
+  'lethalcompany.exe': { name:'Lethal Company',   icon:'👾', genre:'Horror' },
+  'palworld.exe':      { name:'Palworld',         icon:'🌿', genre:'Survival' },
+  'helldivers2.exe':   { name:'Helldivers 2',     icon:'💥', genre:'Action' },
+  'wukong.exe':        { name:'Black Myth: Wukong',icon:'🐒', genre:'Action' },
 };
+
+// ── STEAM INSTALLED GAMES DETECTION ──────────────────────────────────────────
+const fs   = require('fs');
+const path = require('path');
+
+function getSteamLibraryPaths() {
+  const paths = [];
+  // Default Steam paths on Windows
+  const defaultPaths = [
+    'C:\\Program Files (x86)\\Steam',
+    'C:\\Program Files\\Steam',
+    process.env.PROGRAMFILES   ? path.join(process.env.PROGRAMFILES,   'Steam') : null,
+    process.env['PROGRAMFILES(X86)'] ? path.join(process.env['PROGRAMFILES(X86)'], 'Steam') : null,
+  ].filter(Boolean);
+
+  for (const steamPath of defaultPaths) {
+    if (fs.existsSync(steamPath)) {
+      paths.push(steamPath);
+      // Check libraryfolders.vdf for additional libraries
+      const vdfPath = path.join(steamPath, 'steamapps', 'libraryfolders.vdf');
+      if (fs.existsSync(vdfPath)) {
+        try {
+          const vdf = fs.readFileSync(vdfPath, 'utf8');
+          const pathMatches = vdf.match(/"path"\s+"([^"]+)"/g) || [];
+          pathMatches.forEach(m => {
+            const p = m.match(/"path"\s+"([^"]+)"/)?.[1];
+            if (p && fs.existsSync(p)) paths.push(p);
+          });
+        } catch(e) {}
+      }
+      break;
+    }
+  }
+  return [...new Set(paths)];
+}
+
+function getSteamInstalledGames() {
+  const games = [];
+  try {
+    const libraryPaths = getSteamLibraryPaths();
+    for (const libPath of libraryPaths) {
+      const appsPath = path.join(libPath, 'steamapps');
+      if (!fs.existsSync(appsPath)) continue;
+      const files = fs.readdirSync(appsPath).filter(f => f.endsWith('.acf'));
+      for (const file of files) {
+        try {
+          const acf = fs.readFileSync(path.join(appsPath, file), 'utf8');
+          const appId   = acf.match(/"appid"\s+"(\d+)"/)?.[1];
+          const name    = acf.match(/"name"\s+"([^"]+)"/)?.[1];
+          const installDir = acf.match(/"installdir"\s+"([^"]+)"/)?.[1];
+          if (appId && name && installDir) {
+            games.push({ appId, name, installDir, path: path.join(appsPath, 'common', installDir) });
+          }
+        } catch(e) {}
+      }
+    }
+  } catch(e) {}
+  return games;
+}
+
+// IPC handler to get Steam installed games
+// Add this inside the ipcMain handlers section:
+// ipcMain.handle('get-steam-games', async () => {
+//   return getSteamInstalledGames();
+// });
+
 
 // ── GAME DETECTION ────────────────────────────────────────────────────────────
 function startGameDetection() {
