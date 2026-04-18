@@ -66,6 +66,10 @@ contextBridge.exposeInMainWorld('valcrown', {
   // Guest mode
   isGuest:             () => ipcRenderer.invoke('is-guest'),
 
+  // Device
+  getDeviceVid:        () => ipcRenderer.invoke('get-device-vid'),
+  getOsInfo:           () => ipcRenderer.invoke('get-os-info'),
+
   // Misc
   openExternal:        (url) => ipcRenderer.send('open-external', url),
   notify:              (title, body) => ipcRenderer.send('show-notification', { title, body }),

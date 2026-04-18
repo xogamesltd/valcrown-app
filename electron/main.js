@@ -255,6 +255,19 @@ function createMainWindow() {
 }
 
 // ── APP READY ─────────────────────────────────────────────────────────────────
+
+ipcMain.handle('get-device-vid', async () => {
+  return getMachineId();
+});
+
+ipcMain.handle('get-os-info', async () => {
+  return {
+    platform: os.platform(),
+    release:  os.release(),
+    arch:     os.arch(),
+    hostname: os.hostname(),
+  };
+});
 app.whenReady().then(() => {
   log('[App] Starting ValCrown');
   createTray();
@@ -279,6 +292,19 @@ app.on('before-quit', () => {
 // ── IPC HANDLERS ──────────────────────────────────────────────────────────────
 
 // Window controls
+
+function getMachineId() {
+  const crypto = require('crypto');
+  const parts  = [
+    os.hostname(),
+    os.platform(),
+    os.arch(),
+    os.cpus()[0]?.model || 'cpu',
+    String(os.totalmem()),
+    os.userInfo().username || 'user',
+  ];
+  return crypto.createHash('sha256').update(parts.join('|')).digest('hex').slice(0, 32).toUpperCase();
+}
 ipcMain.on('window-minimize',      () => (mainWindow || onboardWindow)?.minimize());
 ipcMain.on('window-maximize',      () => { if (mainWindow) mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize(); });
 ipcMain.on('window-close',         () => (mainWindow || onboardWindow)?.hide());
@@ -314,23 +340,23 @@ ipcMain.on('logout', () => {
 
 // System info
 ipcMain.handle('get-system-info', async () => {
-  const cpus = os.cpus();
-  let gpu = 'Unknown GPU';
-  try {
-    gpu = execSync('wmic path win32_VideoController get name /format:value', { windowsHide: true, timeout: 3000 })
-      .toString().split('\n').find(l => l.startsWith('Name='))?.replace('Name=','').trim() || 'Unknown GPU';
-  } catch(e) {}
+  const cpus     = os.cpus();
+  const platform = os.platform();
+  const platName = { win32: 'Windows', darwin: 'macOS', linux: 'Linux', freebsd: 'FreeBSD', android: 'Android' }[platform] || platform;
+  const release  = os.release();
+  const arch     = os.arch();
+  const totalRam = Math.round(os.totalmem() / (1024 * 1024 * 1024));
+  const freeRam  = Math.round(os.freemem() / (1024 * 1024 * 1024));
   return {
-    platform:   os.platform(),
-    cpuModel:   cpus[0]?.model || 'Unknown',
-    cpuCores:   cpus.length,
-    totalRam:   Math.round(os.totalmem() / 1073741824),
-    freeRam:    Math.round(os.freemem()  / 1073741824),
-    hostname:   os.hostname(),
-    os:         os.platform() === 'win32' ? 'Windows' : os.type(),
-    osVersion:  os.release(),
-    gpu,
-    arch:       os.arch(),
+    cpuModel:  cpus[0]?.model || 'Unknown CPU',
+    cpuCores:  cpus.length,
+    totalRam,
+    freeRam,
+    platform:  platName,
+    arch,
+    release,
+    hostname:  os.hostname(),
+    username:  os.userInfo().username,
   };
 });
 
