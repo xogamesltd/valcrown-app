@@ -173,8 +173,6 @@ const GAME_MAP = {
 };
 
 // ── STEAM INSTALLED GAMES DETECTION ──────────────────────────────────────────
-const fs   = require('fs');
-const path = require('path');
 
 function getSteamLibraryPaths() {
   const paths = [];
@@ -233,76 +231,6 @@ function getSteamInstalledGames() {
 
 // IPC handler to get Steam installed games
 // Add this inside the ipcMain handlers section:
-// ipcMain.handle('get-steam-games', async () => {
-//   return getSteamInstalledGames();
-// });
-
-
-
-// ── STEAM INSTALLED GAMES DETECTION ──────────────────────────────────────────
-const fs   = require('fs');
-const path = require('path');
-
-function getSteamLibraryPaths() {
-  const paths = [];
-  // Default Steam paths on Windows
-  const defaultPaths = [
-    'C:\\Program Files (x86)\\Steam',
-    'C:\\Program Files\\Steam',
-    process.env.PROGRAMFILES   ? path.join(process.env.PROGRAMFILES,   'Steam') : null,
-    process.env['PROGRAMFILES(X86)'] ? path.join(process.env['PROGRAMFILES(X86)'], 'Steam') : null,
-  ].filter(Boolean);
-
-  for (const steamPath of defaultPaths) {
-    if (fs.existsSync(steamPath)) {
-      paths.push(steamPath);
-      // Check libraryfolders.vdf for additional libraries
-      const vdfPath = path.join(steamPath, 'steamapps', 'libraryfolders.vdf');
-      if (fs.existsSync(vdfPath)) {
-        try {
-          const vdf = fs.readFileSync(vdfPath, 'utf8');
-          const pathMatches = vdf.match(/"path"\s+"([^"]+)"/g) || [];
-          pathMatches.forEach(m => {
-            const p = m.match(/"path"\s+"([^"]+)"/)?.[1];
-            if (p && fs.existsSync(p)) paths.push(p);
-          });
-        } catch(e) {}
-      }
-      break;
-    }
-  }
-  return [...new Set(paths)];
-}
-
-function getSteamInstalledGames() {
-  const games = [];
-  try {
-    const libraryPaths = getSteamLibraryPaths();
-    for (const libPath of libraryPaths) {
-      const appsPath = path.join(libPath, 'steamapps');
-      if (!fs.existsSync(appsPath)) continue;
-      const files = fs.readdirSync(appsPath).filter(f => f.endsWith('.acf'));
-      for (const file of files) {
-        try {
-          const acf = fs.readFileSync(path.join(appsPath, file), 'utf8');
-          const appId   = acf.match(/"appid"\s+"(\d+)"/)?.[1];
-          const name    = acf.match(/"name"\s+"([^"]+)"/)?.[1];
-          const installDir = acf.match(/"installdir"\s+"([^"]+)"/)?.[1];
-          if (appId && name && installDir) {
-            games.push({ appId, name, installDir, path: path.join(appsPath, 'common', installDir) });
-          }
-        } catch(e) {}
-      }
-    }
-  } catch(e) {}
-  return games;
-}
-
-// IPC handler to get Steam installed games
-// Add this inside the ipcMain handlers section:
-// ipcMain.handle('get-steam-games', async () => {
-//   return getSteamInstalledGames();
-// });
 
 
 // ── GAME DETECTION ────────────────────────────────────────────────────────────
