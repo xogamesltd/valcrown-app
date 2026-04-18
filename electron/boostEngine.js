@@ -168,7 +168,9 @@ const Engine = {
   // ── KILL PROCESS ────────────────────────────────────────────────────────────
   async killProcess(pid) {
     if (!pid || pid <= 4) return { success: false, reason: 'System process' };
-    const r = await run(`taskkill /PID ${pid} /F`);
+    const safePid2 = parseInt(pid);
+    if (!safePid2 || safePid2 < 1 || safePid2 > 99999) return { success: false };
+    const r = await run(`taskkill /PID ${safePid2} /F`);
     return { success: r.ok, reason: r.err || 'Killed' };
   },
 

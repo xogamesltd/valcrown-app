@@ -23,7 +23,7 @@ const LOG_FILE = path.join(app.getPath('userData'), 'valcrown.log');
 // ── ENCRYPTED STORE ───────────────────────────────────────────────────────────
 const store = new Store({
   name: 'valcrown-data',
-  encryptionKey: 'vc-secure-xogamesltd-2026'
+  encryptionKey: process.env.STORE_ENCRYPTION_KEY || 'vc-secure-xogamesltd-2026'
 });
 
 // ── LOGGER ────────────────────────────────────────────────────────────────────
@@ -543,7 +543,20 @@ ipcMain.on('window-close-onboard', () => onboardWindow?.close());
 
 // Storage
 ipcMain.handle('store-get',    (_, key)        => store.get(key));
-ipcMain.handle('store-set',    (_, key, value) => { store.set(key, value); return true; });
+ipcMain.handle('store-set',    (_, key, value) => {
+  // Security: only allow known safe keys — prevent prototype pollution
+  const ALLOWED_KEYS = [
+    'accessToken','refreshToken','user','license','deviceId','targetApp',
+    'sessionHistory','startupEnabled','userEmail','userPlan','licenseKey',
+    'licenseExpiry','guestMode','appVersion','settings','onboarded'
+  ];
+  if (!ALLOWED_KEYS.includes(String(key))) {
+    log('[Security] Blocked store-set for unknown key: ' + key);
+    return false;
+  }
+  store.set(key, value);
+  return true;
+});
 ipcMain.handle('store-delete', (_, key)        => { store.delete(key); return true; });
 ipcMain.handle('store-clear',  ()              => { store.clear(); return true; });
 
@@ -609,6 +622,13 @@ ipcMain.handle('check-anticheat', async () => {
 
 // Network
 ipcMain.handle('ping-host', (_, host = '8.8.8.8') => new Promise((resolve) => {
+  // Security: validate host is safe IP or hostname — no shell injection
+  const safeHost = String(host).trim();
+  const ipRegex = /^[a-zA-Z0-9.\-]{1,64}$/;
+  if (!ipRegex.test(safeHost) || safeHost.includes('..') || safeHost.includes(';') || safeHost.includes('&') || safeHost.includes('|')) {
+    return resolve(null);
+  }
+  host = safeHost;
   const start = Date.now();
   exec(`ping -n 1 ${host}`, { windowsHide: true }, (err, stdout) => {
     if (err) { resolve({ ms: 999, host, success: false }); return; }
@@ -630,6 +650,11 @@ ipcMain.handle('optimize-tcp', async () => {
 });
 
 ipcMain.handle('set-dns', (_, primary, secondary) => new Promise((resolve) => {
+  // Security: validate IP addresses — only allow valid IPv4
+  const ipRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+  if (!ipRegex.test(primary) || !ipRegex.test(secondary)) {
+    return resolve({ success: false, error: 'Invalid IP address format' });
+  }
   exec(`netsh interface ip set dns "Ethernet" static ${primary} && netsh interface ip add dns "Ethernet" ${secondary} index=2`, { windowsHide: true }, (err) => {
     resolve({ success: !err });
   });
@@ -715,5 +740,10 @@ ipcMain.on('open-external', (_, url) => {
     log('[Security] Invalid URL blocked: ' + url);
   }
 });
-ipcMain.on('show-notification',      (_, { title, body }) => showNotif(title, body));
+ipcMain.on('show-notification', (_, { title, body }) => {
+  // Sanitize notification content
+  const safeTitle = String(title || '').slice(0, 100).replace(/[<>]/g, '');
+  const safeBody  = String(body  || '').slice(0, 300).replace(/[<>]/g, '');
+  showNotif(safeTitle, safeBody);
+});
 ipcMain.on('update-tray',            (_, game) => updateTray(game));
