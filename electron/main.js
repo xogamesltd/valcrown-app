@@ -6,6 +6,7 @@ const os     = require('os');
 const { exec, execSync } = require('child_process');
 const Store  = require('electron-store');
 const fs     = require('fs');
+const Engine = require('./boostEngine');
 
 // ── OPTIMIZATIONS (from document) ─────────────────────────────────────────────
 app.commandLine.appendSwitch('disable-renderer-backgrounding');
@@ -340,42 +341,12 @@ ipcMain.on('logout', () => {
 
 // System info
 ipcMain.handle('get-system-info', async () => {
-  const cpus     = os.cpus();
-  const platform = os.platform();
-  const platName = { win32: 'Windows', darwin: 'macOS', linux: 'Linux', freebsd: 'FreeBSD', android: 'Android' }[platform] || platform;
-  const release  = os.release();
-  const arch     = os.arch();
-  const totalRam = Math.round(os.totalmem() / (1024 * 1024 * 1024));
-  const freeRam  = Math.round(os.freemem() / (1024 * 1024 * 1024));
-  return {
-    cpuModel:  cpus[0]?.model || 'Unknown CPU',
-    cpuCores:  cpus.length,
-    totalRam,
-    freeRam,
-    platform:  platName,
-    arch,
-    release,
-    hostname:  os.hostname(),
-    username:  os.userInfo().username,
-  };
+  return Engine.getSystemInfo();
 });
 
 // CPU/RAM
-let lastCpuInfo = null;
-ipcMain.handle('get-cpu-usage', () => {
-  const cpus = os.cpus();
-  if (!lastCpuInfo) { lastCpuInfo = cpus; return 0; }
-  let totalDiff = 0, idleDiff = 0;
-  cpus.forEach((cpu, i) => {
-    const prev = lastCpuInfo[i];
-    if (!prev) return;
-    const total     = Object.values(cpu.times).reduce((a,b) => a+b, 0);
-    const prevTotal = Object.values(prev.times).reduce((a,b) => a+b, 0);
-    totalDiff += total - prevTotal;
-    idleDiff  += cpu.times.idle - prev.times.idle;
-  });
-  lastCpuInfo = cpus;
-  return Math.max(0, Math.round(((totalDiff - idleDiff) / totalDiff) * 100)) || 0;
+ipcMain.handle('get-cpu-usage', async () => {
+  return Engine.getCpuUsage();
 });
 
 ipcMain.handle('get-ram-usage', () => {
@@ -385,26 +356,9 @@ ipcMain.handle('get-ram-usage', () => {
 });
 
 // Processes
-ipcMain.handle('get-processes', () => new Promise((resolve) => {
-  if (os.platform() !== 'win32') { resolve([]); return; }
-  exec('tasklist /fo csv /nh 2>nul', { windowsHide: true }, (err, stdout) => {
-    if (err) { resolve([]); return; }
-    const procs = stdout.trim().split('\n').map(line => {
-      const parts = line.replace(/"/g,'').split(',');
-      const name  = (parts[0]||'').trim().toLowerCase();
-      return {
-        name:        parts[0]?.replace(/"/g,'').trim() || '',
-        pid:         parseInt(parts[1]) || 0,
-        memoryKb:    parseInt((parts[4]||'0').replace(/[^0-9]/g,'')) || 0,
-        memoryMb:    Math.round(parseInt((parts[4]||'0').replace(/[^0-9]/g,'')) / 1024),
-        isAntiCheat: ANTI_CHEAT.has(name),
-        isProtected: PROTECTED.has(name),
-        canKill:     !ANTI_CHEAT.has(name) && !PROTECTED.has(name),
-      };
-    }).filter(p => p.name && p.pid).sort((a,b) => b.memoryKb - a.memoryKb).slice(0, 50);
-    resolve(procs);
-  });
-}));
+ipcMain.handle('get-processes', async () => {
+  return Engine.getProcesses();
+});
 
 ipcMain.handle('kill-process', (_, pid) => new Promise((resolve) => {
   if (pid <= 4) { resolve({ success: false, reason: 'System process' }); return; }
@@ -419,20 +373,9 @@ ipcMain.handle('clean-ram', () => new Promise((resolve) => {
 }));
 
 // Anti-cheat check
-ipcMain.handle('check-anticheat', () => new Promise((resolve) => {
-  exec('tasklist /fo csv /nh 2>nul', { windowsHide: true }, (err, stdout) => {
-    if (err) { resolve({ safe: true, detected: [], warning: 'Could not check' }); return; }
-    const lower = stdout.toLowerCase();
-    const detected = [...ANTI_CHEAT].filter(ac => lower.includes(ac));
-    resolve({
-      safe:    detected.length === 0,
-      detected,
-      warning: detected.length > 0
-        ? `Anti-cheat detected: ${detected.join(', ')} — ValCrown will NOT touch these processes`
-        : 'No anti-cheat detected — safe to boost all processes'
-    });
-  });
-}));
+ipcMain.handle('check-anticheat', async () => {
+  return Engine.checkAntiCheat();
+});
 
 // Network
 ipcMain.handle('ping-host', (_, host = '8.8.8.8') => new Promise((resolve) => {
@@ -444,27 +387,17 @@ ipcMain.handle('ping-host', (_, host = '8.8.8.8') => new Promise((resolve) => {
   });
 }));
 
-ipcMain.handle('flush-dns', () => new Promise((resolve) => {
-  exec('ipconfig /flushdns && ipconfig /registerdns', { windowsHide: true }, (err) => {
-    resolve({ success: !err });
-    log('[Net] DNS flushed');
-  });
-}));
+ipcMain.handle('flush-dns', async () => {
+  const r = await Engine.flushDns();
+  log('[Net] DNS flushed: ' + r.steps.filter(s=>s.ok).map(s=>s.label).join(', '));
+  return r;
+});
 
-ipcMain.handle('optimize-tcp', () => new Promise((resolve) => {
-  const cmds = [
-    'netsh int tcp set global autotuninglevel=normal',
-    'netsh int tcp set global rss=enabled',
-    'netsh int tcp set global chimney=disabled',
-    'netsh int tcp set global ecncapability=enabled',
-    'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters" /v TcpAckFrequency /t REG_DWORD /d 1 /f',
-    'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters" /v TCPNoDelay /t REG_DWORD /d 1 /f',
-  ].join(' & ');
-  exec(cmds, { windowsHide: true }, (err) => {
-    resolve({ success: !err, applied: ['AutoTuning','RSS','ECN','Nagle Disabled'] });
-    log('[Net] TCP optimized');
-  });
-}));
+ipcMain.handle('optimize-tcp', async () => {
+  const r = await Engine.optimizeNetwork();
+  log('[Net] TCP optimized: ' + (r.applied||[]).join(', '));
+  return r;
+});
 
 ipcMain.handle('set-dns', (_, primary, secondary) => new Promise((resolve) => {
   exec(`netsh interface ip set dns "Ethernet" static ${primary} && netsh interface ip add dns "Ethernet" ${secondary} index=2`, { windowsHide: true }, (err) => {
@@ -473,71 +406,31 @@ ipcMain.handle('set-dns', (_, primary, secondary) => new Promise((resolve) => {
 }));
 
 // Boost
-ipcMain.handle('apply-boost', (_, targetName, mode) => new Promise((resolve) => {
+ipcMain.handle('apply-boost', async (_, targetName, mode) => {
   const m = mode || 'safe';
-  if (os.platform() !== 'win32') {
-    resolve({ success: true, mode: m, applied: ['Simulated on non-Windows'] });
-    return;
-  }
-  boostActive = true;
-  const applied = [];
-  const cmds = [];
+  const result = await Engine.apply(targetName, m);
+  boostActive = result.success;
+  log('[Engine] Boost: ' + (result.applied||[]).join(', '));
+  return result;
+});
 
-  cmds.push('powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c');
-  applied.push('Power: High Performance');
-
-  cmds.push('reg add "HKCU\System\GameConfigStore" /v GameDVR_Enabled /t REG_DWORD /d 0 /f');
-  applied.push('GameDVR: Disabled');
-
-  cmds.push('reg add "HKLM\SYSTEM\CurrentControlSet\Control\GraphicsDrivers" /v HwSchMode /t REG_DWORD /d 2 /f');
-  applied.push('HAGS: Enabled');
-
-  cmds.push('netsh int tcp set global autotuninglevel=normal && netsh int tcp set global rss=enabled');
-  applied.push('TCP: Optimized');
-
-  if (targetName) {
-    cmds.push(`wmic process where name="${targetName}.exe" CALL setpriority "high priority"`);
-    applied.push(`Priority: ${targetName} → High`);
-  }
-
-  if (m === 'aggressive') {
-    cmds.push('sc stop SysMain && sc stop WSearch');
-    applied.push('SysMain + WSearch: Stopped');
-    cmds.push('reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TcpAckFrequency /t REG_DWORD /d 1 /f');
-    cmds.push('reg add "HKLM\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters" /v TCPNoDelay /t REG_DWORD /d 1 /f');
-    applied.push('Nagle Algorithm: Disabled');
-  }
-
-  exec(cmds.join(' & '), { windowsHide: true }, (err) => {
-    if (err) log('[Boost] Error: ' + err.message);
-    else log('[Boost] Applied ' + m + ': ' + applied.join(', '));
-    resolve({ success: !err, mode: m, applied });
-  });
-}));
-
-ipcMain.handle('revert-boost', () => {
-  revertBoost();
-  return { success: true };
+ipcMain.handle('revert-boost', async () => {
+  const result = await Engine.revert();
+  boostActive = false;
+  log('[Engine] Boost reverted');
+  return result;
 });
 
 ipcMain.handle('boost-isactive', () => boostActive);
 
 // Startup
 ipcMain.handle('set-startup', (_, enabled) => {
-  try {
-    const { execSync } = require('child_process');
-    const exePath = process.execPath;
-    if (enabled) {
-      execSync(`reg add "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" /v ValCrown /t REG_SZ /d "${exePath}" /f`, { windowsHide: true });
-    } else {
-      execSync('reg delete "HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run" /v ValCrown /f', { windowsHide: true });
-    }
-    store.set('startupEnabled', enabled);
-    return { success: true };
-  } catch(e) { return { success: false }; }
+  const r = Engine.setStartup(enabled);
+  if (r.success) store.set('startupEnabled', enabled);
+  return r;
 });
 
-ipcMain.handle('get-startup', () => store.get('startupEnabled', false));
+ipcMain.handle('get-startup', () => Engine.getStartupEnabled());
 
 // Game
 ipcMain.handle('get-current-game',   () => currentGame);
