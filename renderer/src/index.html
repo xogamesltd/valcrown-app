@@ -361,7 +361,21 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
       </div>
 
       <!-- Game Detection -->
-      <!-- FIX MY GAME — MAIN CTA -->
+      <!-- SYSTEM SCAN CARD -->
+      <div class="card" style="margin-bottom:12px" id="scan-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div class="card-head" style="margin:0">🔍 System Scan</div>
+          <span id="scan-status-badge" style="font-size:11px;color:var(--t3)">Not scanned yet</span>
+        </div>
+        <div id="scan-content">
+          <div style="text-align:center;padding:16px 0">
+            <div style="font-size:13px;color:var(--t2);margin-bottom:14px;line-height:1.6">Find what's slowing your games — takes under 5 seconds</div>
+            <button class="scan-btn-big" id="scan-btn" onclick="runSystemScan()">🔍 Scan My System</button>
+          </div>
+        </div>
+      </div>
+
+            <!-- FIX MY GAME — MAIN CTA -->
       <div class="card" style="margin-bottom:12px" id="fix-card">
         <div class="fix-btn-wrap">
           <button class="fix-btn-main" id="fix-main-btn" onclick="fixMyGame()">
@@ -504,6 +518,7 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
       </div>
       <div class="card">
         <div class="card-head">Boost Status</div>
+        <div id="boost-advice" style="font-size:12px;color:var(--t2);margin-bottom:10px"></div>
         <div id="boost-status-detail" style="font-size:13px;color:var(--t2)">Boost not active. Click Activate Boost to optimize your system.</div>
         <div style="margin-top:12px;display:flex;gap:8px">
           <button class="btn btn-ghost btn-sm" id="revert-btn" onclick="revertAll()" style="display:none">↩️ Undo All Changes</button>
@@ -1019,7 +1034,7 @@ async function init() {
 
     // Get version
     try {
-      var v = await window.valcrown.getVersion();
+      var v = await window.valcrown.getVersion().catch(function(){return null;});
       if (v) setEl('s-version', v);
     } catch(e) {}
 
@@ -1028,7 +1043,7 @@ async function init() {
 
     // Check startup state
     try {
-      var startupEnabled = await window.valcrown.getStartupEnabled();
+      var startupEnabled = await window.valcrown.getStartupEnabled().catch(function(){return false;});
       var toggle = document.getElementById('toggle-startup');
       if (toggle) toggle.checked = startupEnabled;
     } catch(e) {}
@@ -1058,7 +1073,7 @@ async function init() {
 
     // Guest mode handling
     try {
-      var isGuest = await window.valcrown.isGuest();
+      var isGuest = await window.valcrown.isGuest().catch(function(){return false;});
       if (isGuest) {
         var banner = document.getElementById('guest-banner');
         if (banner) banner.classList.add('show');
@@ -1086,7 +1101,7 @@ async function init() {
 // ── SYSTEM INFO ─────────────────────────────────────────────
 async function loadSystemInfo() {
   try {
-    var sys = await window.valcrown.getSystemInfo();
+    var sys = await window.valcrown.getSystemInfo().catch(function(){return null;});
     if (!sys) return;
     setEl('sys-cpu-name', sys.cpuModel || '--');
     setEl('sys-cpu-cores', (sys.cpuCores || '--') + ' cores');
@@ -1118,7 +1133,7 @@ function startMetrics() { updateMetrics(); setInterval(updateMetrics, 2500); }
 
 async function updateMetrics() {
   try {
-    var cpu = await window.valcrown.getCpuUsage();
+    var cpu = await window.valcrown.getCpuUsage().catch(function(){return 0;});
     var ram = await window.valcrown.getRamUsage();
     lastCpu = typeof cpu === 'number' ? cpu : 0;
     // ram might be object with usedPct
