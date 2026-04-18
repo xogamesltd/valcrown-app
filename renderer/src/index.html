@@ -299,7 +299,7 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
     <div class="nav-section">
       <div class="nav-label">Tools</div>
       
-      <button class="nav-btn" onclick="go('settings')">
+      <button class="nav-btn" onclick="go('settings');loadSettingsPage()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         Settings
       </button>
@@ -566,41 +566,163 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
 
     <!-- SETTINGS -->
     <div id="pg-settings" class="page">
-      <div class="ph"><div><div class="ph-title">Settings</div><div class="ph-sub">Account and preferences</div></div></div>
+      <div class="ph"><div><div class="ph-title">Settings</div><div class="ph-sub">Account, preferences and app info</div></div></div>
+
+      <!-- Account Card -->
       <div class="card" style="margin-bottom:12px">
-        <div class="card-head">Account</div>
+        <div class="card-head">👤 Account</div>
         <div class="settings-row">
-          <div><div class="settings-label" id="s-email">--</div><div class="settings-sub" id="s-plan">Pro Plan</div></div>
-          <button class="btn btn-red btn-sm" onclick="doLogout()">Sign Out</button>
+          <div style="display:flex;align-items:center;gap:12px">
+            <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#7c6aff,#a89fff);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;color:#fff;flex-shrink:0" id="s-avatar">V</div>
+            <div>
+              <div class="settings-label" id="s-email" style="font-size:14px;font-weight:600">Loading...</div>
+              <div class="settings-sub" id="s-plan" style="margin-top:2px">Loading plan...</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="window.valcrown.openExternal('https://valcrown.com/dashboard.html')">Dashboard</button>
+            <button class="btn btn-red btn-sm" onclick="doLogout()">Sign Out</button>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div><div class="settings-label">License Key</div><div class="settings-sub" id="s-license-key" style="font-family:monospace;letter-spacing:1px;font-size:10px;margin-top:2px">Loading...</div></div>
+          <button class="btn btn-ghost btn-sm" onclick="copyLicenseKey()">Copy</button>
+        </div>
+        <div class="settings-row" style="border:none">
+          <div><div class="settings-label">License Expires</div><div class="settings-sub" id="s-expiry">Loading...</div></div>
+          <button class="btn btn-green btn-sm" onclick="window.valcrown.openExternal('https://valcrown.com/pricing.html')">Upgrade</button>
         </div>
       </div>
+
+      <!-- Preferences Card -->
       <div class="card" style="margin-bottom:12px">
-        <div class="card-head">Preferences</div>
+        <div class="card-head">⚙️ Preferences</div>
         <div class="settings-row">
           <div><div class="settings-label">Launch on startup</div><div class="settings-sub">Start ValCrown when Windows boots</div></div>
           <label class="toggle"><input type="checkbox" id="toggle-startup" onchange="toggleStartup(this.checked)"><span class="toggle-slider"></span></label>
         </div>
         <div class="settings-row">
-          <div><div class="settings-label">Boost Mode</div><div class="settings-sub">Safe = stable tweaks. Aggressive = maximum performance</div></div>
-          <select id="boost-mode-select" onchange="setMode(this.value)" style="background:var(--bg3);color:var(--t1);border:1px solid var(--border2);border-radius:var(--r-sm);padding:6px 10px;font-size:12px;cursor:pointer">
-            <option value="safe">Safe Mode</option>
-            <option value="aggressive">Aggressive</option>
+          <div><div class="settings-label">Boost Mode</div><div class="settings-sub">Safe = stable tweaks · Aggressive = max performance</div></div>
+          <select id="boost-mode-select" onchange="setMode(this.value)" style="background:var(--bg3);color:var(--t1);border:1px solid var(--border2);border-radius:var(--r-sm);padding:6px 10px;font-size:12px;cursor:pointer;outline:none">
+            <option value="safe">🛡️ Safe Mode</option>
+            <option value="aggressive">⚡ Aggressive</option>
           </select>
         </div>
-      </div>
-      <div class="card">
-        <div class="card-head">About ValCrown</div>
-        <div class="info-row"><span class="info-key">Version</span><span class="info-val" id="s-version">1.0.0</span></div>
-        <div class="info-row"><span class="info-key">Backend</span><span class="info-val">api.valcrown.com</span></div>
-        
-        <div class="info-row"><span class="info-key">Game Database</span><span class="info-val">200+ titles</span></div>
-        <div class="info-row"><span class="info-key">Publisher</span><span class="info-val">XOGAMESLTD</span></div>
-        <div style="margin-top:12px;display:flex;gap:12px;font-size:12px">
-          <a href="https://valcrown.com" onclick="event.preventDefault();window.valcrown.openExternal('https://valcrown.com')">Website</a>
-          <a href="#" onclick="event.preventDefault();window.valcrown.openExternal('mailto:support@valcrown.com')">Support</a>
-          <a href="#" onclick="event.preventDefault();window.valcrown.openExternal('https://valcrown.com/terms')">Terms</a>
+        <div class="settings-row" style="border:none">
+          <div><div class="settings-label">Minimize to tray on close</div><div class="settings-sub">Keep ValCrown running in the system tray</div></div>
+          <label class="toggle"><input type="checkbox" id="toggle-tray" checked disabled><span class="toggle-slider"></span></label>
         </div>
       </div>
+
+      <!-- Update Card -->
+      <div class="card" style="margin-bottom:12px">
+        <div class="card-head">🔄 Updates</div>
+        <div class="settings-row">
+          <div>
+            <div class="settings-label">Current Version</div>
+            <div class="settings-sub" id="s-version-settings">Checking...</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" id="check-update-btn" onclick="checkForUpdatesUI()">Check for Updates</button>
+        </div>
+        <div id="update-status" style="display:none;margin-top:8px;padding:10px 12px;border-radius:8px;font-size:12px"></div>
+      </div>
+
+      <!-- About Card -->
+      <div class="card">
+        <div class="card-head">ℹ️ About ValCrown</div>
+        <div class="info-row"><span class="info-key">Version</span><span class="info-val" id="s-version">—</span></div>
+        <div class="info-row"><span class="info-key">Game Database</span><span class="info-val">80+ titles</span></div>
+        <div class="info-row"><span class="info-key">Backend</span><span class="info-val">api.valcrown.com</span></div>
+        <div class="info-row"><span class="info-key">Publisher</span><span class="info-val">XOGAMESLTD</span></div>
+        <div class="info-row"><span class="info-key">Support</span><span class="info-val">support@xogamess.com</span></div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="window.valcrown.openExternal('https://valcrown.com')">🌐 Website</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.valcrown.openExternal('mailto:support@xogamess.com')">✉️ Support</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.valcrown.openExternal('https://valcrown.com/terms.html')">📄 Terms</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.valcrown.openExternal('https://valcrown.com/privacy.html')">🔒 Privacy</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+    async function copyLicenseKey() {
+      const key = document.getElementById('s-license-key').textContent;
+      if (key && key !== 'Loading...' && key !== 'N/A') {
+        try { await navigator.clipboard.writeText(key); } catch(e) {}
+        const btn = event.target;
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 1500);
+      }
+    }
+
+    async function checkForUpdatesUI() {
+      const btn = document.getElementById('check-update-btn');
+      const status = document.getElementById('update-status');
+      btn.textContent = 'Checking...';
+      btn.disabled = true;
+      status.style.display = 'none';
+      try {
+        const result = await window.valcrown.checkForUpdates();
+        status.style.display = 'block';
+        if (result.isOutdated) {
+          status.style.background = 'rgba(255,183,77,0.1)';
+          status.style.border = '1px solid rgba(255,183,77,0.3)';
+          status.style.color = '#ffb74d';
+          status.innerHTML = '⚠️ Update available: v' + result.latest + ' — <a href="#" onclick="window.valcrown.openExternal('https://valcrown.com/download.html');return false" style="color:#7c6aff">Download now</a>';
+        } else {
+          status.style.background = 'rgba(0,232,122,0.1)';
+          status.style.border = '1px solid rgba(0,232,122,0.3)';
+          status.style.color = '#00e87a';
+          status.textContent = '✓ You are on the latest version (v' + result.current + ')';
+        }
+      } catch(e) {
+        status.style.display = 'block';
+        status.style.background = 'rgba(255,79,79,0.1)';
+        status.style.border = '1px solid rgba(255,79,79,0.3)';
+        status.style.color = '#ff4f4f';
+        status.textContent = 'Could not check for updates — check your connection';
+      }
+      btn.textContent = 'Check for Updates';
+      btn.disabled = false;
+    }
+
+    // Load settings data
+    async function loadSettingsPage() {
+      try {
+        const token = await window.valcrown.store.get('accessToken');
+        const email = await window.valcrown.store.get('userEmail');
+        const plan  = await window.valcrown.store.get('userPlan');
+        const licenseKey = await window.valcrown.store.get('licenseKey');
+        const expiresAt = await window.valcrown.store.get('licenseExpiry');
+
+        if (email) {
+          document.getElementById('s-email').textContent = email;
+          document.getElementById('s-avatar').textContent = email.charAt(0).toUpperCase();
+        }
+        if (plan) document.getElementById('s-plan').textContent = plan.charAt(0).toUpperCase() + plan.slice(1) + ' Plan';
+        if (licenseKey) document.getElementById('s-license-key').textContent = licenseKey;
+        else document.getElementById('s-license-key').textContent = 'N/A';
+
+        if (expiresAt) {
+          const exp = new Date(expiresAt);
+          const now = new Date();
+          const days = Math.ceil((exp - now) / 86400000);
+          document.getElementById('s-expiry').textContent = days > 0 ? exp.toLocaleDateString() + ' (' + days + ' days left)' : 'Expired';
+        } else {
+          document.getElementById('s-expiry').textContent = plan === 'lifetime' ? 'Never — Lifetime License' : 'N/A';
+        }
+
+        const v = await window.valcrown.getVersion();
+        if (v) {
+          document.getElementById('s-version').textContent = 'v' + v;
+          document.getElementById('s-version-settings').textContent = 'v' + v;
+        }
+
+        const startup = await window.valcrown.getStartup();
+        document.getElementById('toggle-startup').checked = !!startup;
+      } catch(e) {}
+    }
+    </script>
     </div>
 
   </div><!-- /main -->
