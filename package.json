@@ -1,7 +1,7 @@
 {
   "name": "valcrown",
   "version": "1.0.0",
-  "description": "ValCrown — Cloud Gaming Optimizer",
+  "description": "ValCrown \u2014 Cloud Gaming Optimizer",
   "main": "electron/main.js",
   "author": {
     "name": "XOGAMESLTD",
@@ -30,8 +30,16 @@
       "package.json"
     ],
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
-      "requestedExecutionLevel": "requireAdministrator"
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "requestedExecutionLevel": "requireAdministrator",
+      "verifyUpdateCodeSignature": false
     },
     "nsis": {
       "oneClick": false,
@@ -39,7 +47,6 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "ValCrown",
-      "include": "installer/installer.nsh",
       "deleteAppDataOnUninstall": false,
       "runAfterFinish": true
     }

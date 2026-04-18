@@ -302,7 +302,7 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
         <span style="font-size:18px">👀</span>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:600">Exploring as Guest</div>
-          <div style="font-size:11px;color:var(--t2)">System monitoring works · AI, Boost and Network require an account</div>
+          <div style="font-size:11px;color:var(--t2)">Boost, Network and System optimization require administrator access</div>
         </div>
         <button class="btn btn-primary btn-sm" onclick="doSignIn()">Sign In</button>
       </div>
@@ -426,11 +426,8 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
         <div id="anticheat-result" style="font-size:13px;color:var(--t2)">Click "Check Now" to scan for anti-cheat software.</div>
       </div>
       <div class="card">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div class="card-head" style="margin:0">AI Boost Advisor</div>
-          <button class="btn btn-primary btn-sm" onclick="getBoostAdvice()">Analyze</button>
-        </div>
-        <div id="boost-advice" style="font-size:13px;color:var(--t2)">Click "Analyze" for AI-powered boost recommendation.</div>
+        <div class="card-head">Boost Status</div>
+        <div id="boost-status-detail" style="font-size:13px;color:var(--t2)">Boost not active. Click Activate Boost to optimize your system.</div>
       </div>
     </div>
 
@@ -443,7 +440,7 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
           <div style="display:flex;gap:6px">
             <button class="btn btn-ghost btn-sm" onclick="doCleanRam()">🧹 Clean RAM</button>
             <button class="btn btn-ghost btn-sm" onclick="loadProcs()">↻ Refresh</button>
-            <button class="btn btn-primary btn-sm" onclick="aiCheckAll()">🤖 AI Check All</button>
+            <button class="btn btn-ghost btn-sm" onclick="loadProcs()">↻ Refresh</button>
           </div>
         </div>
         <div id="proc-list"><div class="empty">Click Refresh to load processes</div></div>
@@ -471,7 +468,7 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
           <div style="display:flex;flex-direction:column;gap:7px">
             <button class="btn btn-primary" id="dns-btn" onclick="doFlushDns()" style="width:100%;height:36px">🌐 Flush DNS Cache</button>
             <button class="btn btn-ghost" onclick="doTcpOpt()" style="width:100%;height:36px">⚡ Optimize TCP</button>
-            <button class="btn btn-ghost" onclick="doNetDiag()" style="width:100%;height:36px">🔍 AI Diagnose</button>
+            <button class="btn btn-ghost" onclick="doNetTest()" style="width:100%;height:36px">🔍 Full Network Test</button>
           </div>
         </div>
       </div>
@@ -484,7 +481,10 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
           <button class="btn btn-ghost btn-sm" onclick="setDns('208.67.222.222','208.67.220.220')">OpenDNS</button>
         </div>
       </div>
-      <div class="card"><div class="card-head">AI Network Analysis</div><div id="net-diag" style="font-size:13px;color:var(--t2)">Click "AI Diagnose" above.</div></div>
+      <div class="card">
+        <div class="card-head">Network Status</div>
+        <div id="net-diag" style="font-size:13px;color:var(--t2)">Run a ping test to see your network quality.</div>
+      </div>
     </div>
 
     <!-- SYSTEM INFO -->
@@ -552,7 +552,7 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
         <div class="card-head">About ValCrown</div>
         <div class="info-row"><span class="info-key">Version</span><span class="info-val" id="s-version">1.0.0</span></div>
         <div class="info-row"><span class="info-key">Backend</span><span class="info-val">api.valcrown.com</span></div>
-        <div class="info-row"><span class="info-key">AI Engine</span><span class="info-val">Claude Sonnet</span></div>
+        
         <div class="info-row"><span class="info-key">Game Database</span><span class="info-val">200+ titles</span></div>
         <div class="info-row"><span class="info-key">Publisher</span><span class="info-val">XOGAMESLTD</span></div>
         <div style="margin-top:12px;display:flex;gap:12px;font-size:12px">
@@ -988,6 +988,12 @@ async function toggleBoost() {
 }
 
 function updateBoostUI(active, label) {
+  var statusEl = document.getElementById('boost-status-detail');
+  if (statusEl) {
+    statusEl.innerHTML = active
+      ? '<span style="color:var(--green)">✅ Boost active — High Performance power plan, TCP optimized, GameDVR disabled</span>'
+      : 'Boost not active. Click Activate Boost to optimize your system.';
+  }
   ['dash-boost-btn','boost-btn'].forEach(function(id) {
     var btn = document.getElementById(id);
     if (!btn) return;
@@ -1146,37 +1152,9 @@ async function loadProcs() {
   }).join('');
 }
 
-async function aiCheckProc(name, pid) {
-  var result = await API.checkProcess(name, 0, 0);
-  if (result.ok && result.data) {
-    var d = result.data;
-    var action = d.action || 'skip';
-    var reason = d.reason || '';
-    var colors = { kill:'var(--red)', suspend:'var(--yellow)', skip:'var(--green)' };
-    var row = document.getElementById('proc-' + pid);
-    if (row) {
-      var old = row.querySelector('.ai-result');
-      if (old) old.remove();
-      var div = document.createElement('div');
-      div.className='ai-result';
-      div.style.cssText='font-size:10px;color:'+(colors[action]||'var(--t2)')+';margin-top:3px;padding-top:3px;border-top:1px solid var(--border)';
-      div.textContent='🤖 '+action.toUpperCase()+' — '+reason;
-      row.querySelector('.proc-info').after(div);
-    }
-    log('🤖 ' + name + ' → ' + action);
-  }
-}
 
-async function aiCheckAll() {
-  var rows = document.querySelectorAll('.proc-item');
-  if (!rows.length) { await loadProcs(); return; }
-  for (var i=0; i<Math.min(rows.length,8); i++) {
-    var row = rows[i];
-    var name = row.querySelector('.proc-name') && row.querySelector('.proc-name').textContent.split(' ')[0];
-    var pid  = parseInt(row.id.split('-')[1]);
-    if (name && pid) await aiCheckProc(name, pid);
-  }
-}
+
+
 
 async function killProc(pid, name) {
   var result = await window.valcrown.killProcess(pid);
