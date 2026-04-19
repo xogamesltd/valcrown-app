@@ -1,784 +1,224 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, shell, Notification, dialog, Tray, Menu, nativeImage } = require('electron');
-const path   = require('path');
-const os     = require('os');
-const { exec, execSync } = require('child_process');
-const Store  = require('electron-store');
-const fs     = require('fs');
-const Engine = require('./boostEngine');
+const { app, BrowserWindow, ipcMain, shell, Tray, Menu, nativeImage, Notification, dialog } = require('electron');
+const path      = require('path');
+const os        = require('os');
+const https     = require('https');
+const Store     = require('electron-store');
+const Scanner   = require('../engines/scanner');
+const Optimizer = require('../engines/optimizer');
 
-// ── OPTIMIZATIONS (from document) ─────────────────────────────────────────────
-app.commandLine.appendSwitch('disable-renderer-backgrounding');
-app.commandLine.appendSwitch('disable-extensions');
-app.commandLine.appendSwitch('disable-http-cache');
-app.commandLine.appendSwitch('high-dpi-support', '1');
-app.commandLine.appendSwitch('force-device-scale-factor', '1');
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const IS_DEV  = process.argv.includes('--dev');
+const API     = 'https://api.valcrown.com';
+const VER     = app.getVersion();
 
-// ── CONSTANTS ─────────────────────────────────────────────────────────────────
-const isDev    = process.argv.includes('--dev');
-const API_URL  = 'https://api.valcrown.com';
-const LOG_FILE = path.join(app.getPath('userData'), 'valcrown.log');
-
-// ── ENCRYPTED STORE ───────────────────────────────────────────────────────────
-const store = new Store({
-  name: 'valcrown-data',
-  encryptionKey: process.env.STORE_ENCRYPTION_KEY || 'vc-secure-xogamesltd-2026'
-});
-
-// ── LOGGER ────────────────────────────────────────────────────────────────────
-function log(msg) {
-  const line = `[${new Date().toISOString()}] ${msg}\n`;
-  try { fs.appendFileSync(LOG_FILE, line); } catch(e) {}
-  if (isDev) console.log(msg);
-}
+// ── STORE ─────────────────────────────────────────────────────────────────────
+const store = new Store({ name: 'valcrown', encryptionKey: process.env.VC_KEY || 'vc-xogamesltd-2026' });
 
 // ── STATE ─────────────────────────────────────────────────────────────────────
-let mainWindow    = null;
-let onboardWindow = null;
-let tray          = null;
-let currentGame   = null;
-let gameDetectInterval = null;
-let boostActive   = false;
+let mainWin   = null;
+let obWin     = null;
+let tray      = null;
+let boosted   = false;
+let curGame   = null;
+let sessStart = null;
+let sessTick  = null;
+let watchLoop = null;
 
-// ── ANTI-CHEAT SAFE LIST ──────────────────────────────────────────────────────
-const ANTI_CHEAT = new Set([
-  'easyanticheat.exe','battleye.exe','be_service.exe','vgc.exe','vanguard.exe',
-  'faceitclient.exe','esea.exe','punkbuster.exe','eac_launcher.exe'
-]);
+// ── LOG ───────────────────────────────────────────────────────────────────────
+const log = (m) => console.log('[' + new Date().toISOString().substr(11,8) + '] ' + m);
 
-const PROTECTED = new Set([
-  'system','smss.exe','csrss.exe','wininit.exe','winlogon.exe',
-  'services.exe','lsass.exe','svchost.exe','dwm.exe','explorer.exe',
-  'taskmgr.exe','valcrown.exe'
-]);
-
-// ── STEAM API INTEGRATION + EXPANDED GAME MAP ─────────────────────────────────
-// Drop-in replacement for the GAME_MAP and game detection section in main.js
-
-// ── STEAM API INTEGRATION + EXPANDED GAME MAP ─────────────────────────────────
-// Drop-in replacement for the GAME_MAP and game detection section in main.js
-
-const GAME_MAP = {
-  // FPS
-  'valorant.exe':      { name:'Valorant',        icon:'🎯', genre:'FPS' },
-  'csgo.exe':          { name:'CS:GO',            icon:'🔫', genre:'FPS' },
-  'cs2.exe':           { name:'CS2',              icon:'🔫', genre:'FPS' },
-  'overwatch.exe':     { name:'Overwatch 2',      icon:'⚡', genre:'FPS' },
-  'overwatch2.exe':    { name:'Overwatch 2',      icon:'⚡', genre:'FPS' },
-  'destiny2.exe':      { name:'Destiny 2',        icon:'🌌', genre:'FPS' },
-  'rainbow6.exe':      { name:'Rainbow Six Siege',icon:'🔰', genre:'FPS' },
-  'thefinals.exe':     { name:'The Finals',       icon:'🏆', genre:'FPS' },
-  'paladins.exe':      { name:'Paladins',         icon:'🛡️', genre:'FPS' },
-  'splitgate.exe':     { name:'Splitgate',        icon:'🌀', genre:'FPS' },
-  'xdefiant.exe':      { name:'XDefiant',         icon:'🎯', genre:'FPS' },
-  'battlebit.exe':     { name:'BattleBit',        icon:'🔫', genre:'FPS' },
-  'insurgency.exe':    { name:'Insurgency',       icon:'🔫', genre:'FPS' },
-  'warface.exe':       { name:'Warface',          icon:'🎖️', genre:'FPS' },
-  'contractorsvr.exe': { name:'Contractors VR',   icon:'🥽', genre:'FPS' },
-
-  // Battle Royale
-  'fortnite.exe':      { name:'Fortnite',         icon:'🏗️', genre:'Battle Royale' },
-  'fortniteclient-win64-shipping.exe': { name:'Fortnite', icon:'🏗️', genre:'Battle Royale' },
-  'r5apex.exe':        { name:'Apex Legends',     icon:'🦾', genre:'Battle Royale' },
-  'pubg.exe':          { name:'PUBG',             icon:'🎯', genre:'Battle Royale' },
-  'tslgame.exe':       { name:'PUBG',             icon:'🎯', genre:'Battle Royale' },
-  'warzone.exe':       { name:'Warzone',          icon:'🎖️', genre:'Battle Royale' },
-  'modernwarfare.exe': { name:'Call of Duty',     icon:'🎖️', genre:'Battle Royale' },
-  'cod.exe':           { name:'Call of Duty',     icon:'🎖️', genre:'Battle Royale' },
-  'codmw.exe':         { name:'MW3',              icon:'🎖️', genre:'Battle Royale' },
-  'hunt.exe':          { name:'Hunt Showdown',    icon:'🏹', genre:'Battle Royale' },
-  'super people.exe':  { name:'Super People',     icon:'🦸', genre:'Battle Royale' },
-  'naraka.exe':        { name:'Naraka Bladepoint',icon:'⚔️', genre:'Battle Royale' },
-  'darkzone.exe':      { name:'The Division 2',   icon:'🛡️', genre:'Battle Royale' },
-
-  // MOBA
-  'leagueclient.exe':  { name:'League of Legends',icon:'⚔️', genre:'MOBA' },
-  'league of legends.exe': { name:'League of Legends', icon:'⚔️', genre:'MOBA' },
-  'dota2.exe':         { name:'Dota 2',           icon:'🛡️', genre:'MOBA' },
-  'smite.exe':         { name:'Smite',            icon:'⚡', genre:'MOBA' },
-  'heroesofthestorm.exe': { name:'Heroes of the Storm', icon:'🌩️', genre:'MOBA' },
-
-  // Sports
-  'rocketleague.exe':  { name:'Rocket League',    icon:'🚀', genre:'Sports' },
-  'fifa23.exe':        { name:'FIFA 23',          icon:'⚽', genre:'Sports' },
-  'fifa24.exe':        { name:'EA FC 24',         icon:'⚽', genre:'Sports' },
-  'eafc25.exe':        { name:'EA FC 25',         icon:'⚽', genre:'Sports' },
-  'nba2k24.exe':       { name:'NBA 2K24',         icon:'🏀', genre:'Sports' },
-  'nba2k25.exe':       { name:'NBA 2K25',         icon:'🏀', genre:'Sports' },
-  'f12023.exe':        { name:'F1 2023',          icon:'🏎️', genre:'Sports' },
-  'f12024.exe':        { name:'F1 24',            icon:'🏎️', genre:'Sports' },
-
-  // Action / Open World
-  'gta5.exe':          { name:'GTA V',            icon:'🚗', genre:'Action' },
-  'rdr2.exe':          { name:'RDR2',             icon:'🤠', genre:'Action' },
-  'cyberpunk2077.exe': { name:'Cyberpunk 2077',   icon:'🌆', genre:'Action' },
-  'eldenring.exe':     { name:'Elden Ring',       icon:'⚔️', genre:'Action' },
-  'sekiro.exe':        { name:'Sekiro',           icon:'🗡️', genre:'Action' },
-  'darksouls3.exe':    { name:'Dark Souls III',   icon:'💀', genre:'Action' },
-  'witcher3.exe':      { name:'The Witcher 3',    icon:'🐺', genre:'RPG' },
-  'assassinscreed.exe':{ name:'Assassins Creed',  icon:'🗡️', genre:'Action' },
-  'spiderman.exe':     { name:'Spider-Man PC',    icon:'🕷️', genre:'Action' },
-  'godofwar.exe':      { name:'God of War',       icon:'🪓', genre:'Action' },
-
-  // RPG
-  'baldursgate3.exe':  { name:'Baldurs Gate 3',   icon:'🎲', genre:'RPG' },
-  'pathofexile.exe':   { name:'Path of Exile',    icon:'💎', genre:'RPG' },
-  'diablo4.exe':       { name:'Diablo IV',        icon:'👹', genre:'RPG' },
-  'diablo3.exe':       { name:'Diablo III',       icon:'👹', genre:'RPG' },
-  'skyrim.exe':        { name:'Skyrim',           icon:'🏔️', genre:'RPG' },
-  'starfield.exe':     { name:'Starfield',        icon:'🚀', genre:'RPG' },
-  'finalfantasy14.exe':{ name:'FFXIV',            icon:'⚔️', genre:'RPG' },
-  'ffxiv_dx11.exe':    { name:'FFXIV',            icon:'⚔️', genre:'RPG' },
-  'worldofwarcraft.exe':{ name:'World of Warcraft',icon:'🧙', genre:'RPG' },
-  'wow.exe':           { name:'World of Warcraft',icon:'🧙', genre:'RPG' },
-
-  // Survival / Sandbox
-  'minecraft.exe':     { name:'Minecraft',        icon:'⛏️', genre:'Sandbox' },
-  'javaw.exe':         { name:'Minecraft',        icon:'⛏️', genre:'Sandbox' },
-  'rust.exe':          { name:'Rust',             icon:'🔩', genre:'Survival' },
-  'valheim.exe':       { name:'Valheim',          icon:'🪓', genre:'Survival' },
-  'ark.exe':           { name:'ARK',              icon:'🦕', genre:'Survival' },
-  'satisfactory.exe':  { name:'Satisfactory',     icon:'🏭', genre:'Sandbox' },
-  'terraria.exe':      { name:'Terraria',         icon:'🌍', genre:'Sandbox' },
-  'subnautica.exe':    { name:'Subnautica',       icon:'🌊', genre:'Survival' },
-  'thelongdark.exe':   { name:'The Long Dark',    icon:'❄️', genre:'Survival' },
-  'dontstarve.exe':    { name:"Don't Starve",     icon:'🕯️', genre:'Survival' },
-
-  // Strategy
-  'ageofempires4.exe': { name:'Age of Empires IV',icon:'⚔️', genre:'Strategy' },
-  'stellaris.exe':     { name:'Stellaris',        icon:'🌌', genre:'Strategy' },
-  'civilization6.exe': { name:'Civ VI',           icon:'🏛️', genre:'Strategy' },
-  'totalwar.exe':      { name:'Total War',        icon:'⚔️', genre:'Strategy' },
-  'hoi4.exe':          { name:'Hearts of Iron IV',icon:'🗺️', genre:'Strategy' },
-  'eu4.exe':           { name:'EU4',              icon:'🗺️', genre:'Strategy' },
-
-  // Cloud Gaming
-  'geforcenow.exe':    { name:'GeForce NOW',      icon:'☁️', genre:'Cloud Gaming' },
-  'shadow.exe':        { name:'Shadow PC',        icon:'👤', genre:'Cloud Gaming' },
-  'xboxapp.exe':       { name:'Xbox Cloud Gaming',icon:'🎮', genre:'Cloud Gaming' },
-  'xboxpcapp.exe':     { name:'Xbox Cloud Gaming',icon:'🎮', genre:'Cloud Gaming' },
-  'amazonluna.exe':    { name:'Amazon Luna',      icon:'🌙', genre:'Cloud Gaming' },
-  'boosteroidlauncher.exe': { name:'Boosteroid', icon:'🚀', genre:'Cloud Gaming' },
-
-  // Other Popular
-  'among us.exe':      { name:'Among Us',         icon:'👾', genre:'Party' },
-  'fallguys.exe':      { name:'Fall Guys',        icon:'🏆', genre:'Party' },
-  'deadbydaylight.exe':{ name:'Dead by Daylight', icon:'💀', genre:'Horror' },
-  'phasmo.exe':        { name:'Phasmophobia',     icon:'👻', genre:'Horror' },
-  'lethalcompany.exe': { name:'Lethal Company',   icon:'👾', genre:'Horror' },
-  'palworld.exe':      { name:'Palworld',         icon:'🌿', genre:'Survival' },
-  'helldivers2.exe':   { name:'Helldivers 2',     icon:'💥', genre:'Action' },
-  'wukong.exe':        { name:'Black Myth: Wukong',icon:'🐒', genre:'Action' },
-};
-
-// ── STEAM INSTALLED GAMES DETECTION ──────────────────────────────────────────
-
-function getSteamLibraryPaths() {
-  const paths = [];
-  // Default Steam paths on Windows
-  const defaultPaths = [
-    'C:\\Program Files (x86)\\Steam',
-    'C:\\Program Files\\Steam',
-    process.env.PROGRAMFILES   ? path.join(process.env.PROGRAMFILES,   'Steam') : null,
-    process.env['PROGRAMFILES(X86)'] ? path.join(process.env['PROGRAMFILES(X86)'], 'Steam') : null,
-  ].filter(Boolean);
-
-  for (const steamPath of defaultPaths) {
-    if (fs.existsSync(steamPath)) {
-      paths.push(steamPath);
-      // Check libraryfolders.vdf for additional libraries
-      const vdfPath = path.join(steamPath, 'steamapps', 'libraryfolders.vdf');
-      if (fs.existsSync(vdfPath)) {
-        try {
-          const vdf = fs.readFileSync(vdfPath, 'utf8');
-          const pathMatches = vdf.match(/"path"\s+"([^"]+)"/g) || [];
-          pathMatches.forEach(m => {
-            const p = m.match(/"path"\s+"([^"]+)"/)?.[1];
-            if (p && fs.existsSync(p)) paths.push(p);
-          });
-        } catch(e) {}
-      }
-      break;
-    }
-  }
-  return [...new Set(paths)];
-}
-
-function getSteamInstalledGames() {
-  const games = [];
-  try {
-    const libraryPaths = getSteamLibraryPaths();
-    for (const libPath of libraryPaths) {
-      const appsPath = path.join(libPath, 'steamapps');
-      if (!fs.existsSync(appsPath)) continue;
-      const files = fs.readdirSync(appsPath).filter(f => f.endsWith('.acf'));
-      for (const file of files) {
-        try {
-          const acf = fs.readFileSync(path.join(appsPath, file), 'utf8');
-          const appId   = acf.match(/"appid"\s+"(\d+)"/)?.[1];
-          const name    = acf.match(/"name"\s+"([^"]+)"/)?.[1];
-          const installDir = acf.match(/"installdir"\s+"([^"]+)"/)?.[1];
-          if (appId && name && installDir) {
-            games.push({ appId, name, installDir, path: path.join(appsPath, 'common', installDir) });
-          }
-        } catch(e) {}
-      }
-    }
-  } catch(e) {}
-  return games;
-}
-
-// IPC handler to get Steam installed games
-
-
-
-// ── VERSION LOCK ──────────────────────────────────────────────────────────────
-const GITHUB_RELEASES_URL = 'https://app.valcrown.com/version';
-let versionCheckPassed = false;
-
-async function checkVersionLock() {
-  try {
-    const https = require('https');
-    const currentVersion = app.getVersion();
-
-    return new Promise((resolve) => {
-      const req = https.get(GITHUB_RELEASES_URL, {
-        headers: { 'User-Agent': 'ValCrown/' + currentVersion }
-      }, (res) => {
-        let data = '';
-        res.on('data', chunk => data += chunk);
-        res.on('end', () => {
-          try {
-            const release = JSON.parse(data);
-            const latest = (release.tag_name || '').replace(/^v/, '');
-            const current = currentVersion.replace(/^v/, '');
-            const isOutdated = latest && latest !== current && compareVersions(latest, current) > 0;
-            resolve({ isOutdated, latest, current });
-          } catch(e) {
-            resolve({ isOutdated: false, latest: null, current: currentVersion });
-          }
-        });
-      });
-      req.on('error', () => resolve({ isOutdated: false, latest: null, current: currentVersion }));
-      req.setTimeout(8000, () => { req.destroy(); resolve({ isOutdated: false, latest: null, current: currentVersion }); });
-    });
-  } catch(e) {
-    return { isOutdated: false, latest: null, current: app.getVersion() };
-  }
-}
-
-function compareVersions(a, b) {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
-  for (let i = 0; i < 3; i++) {
-    if ((pa[i]||0) > (pb[i]||0)) return 1;
-    if ((pa[i]||0) < (pb[i]||0)) return -1;
-  }
-  return 0;
-}
-
-function showUpdateLockScreen(mainWin, latest) {
-  mainWin.webContents.executeJavaScript(`
-    (function() {
-      if (document.getElementById('vc-update-lock')) return;
-      const overlay = document.createElement('div');
-      overlay.id = 'vc-update-lock';
-      overlay.style.cssText = 'position:fixed;inset:0;background:rgba(7,7,15,0.97);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:-apple-system,sans-serif;backdrop-filter:blur(8px)';
-      overlay.innerHTML = \`
-        <div style="width:44px;height:44px;background:linear-gradient(135deg,#7c6aff,#a89fff);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;margin-bottom:20px">V</div>
-        <h2 style="color:#f0f0ff;font-size:20px;font-weight:800;margin:0 0 10px;letter-spacing:-0.5px">Update Required</h2>
-        <p style="color:#9090c0;font-size:14px;text-align:center;max-width:320px;margin:0 0 8px;line-height:1.6">
-          You are running an outdated version of ValCrown.<br>
-          <strong style="color:#ffb74d">v${latest}</strong> is now available.
-        </p>
-        <p style="color:#ff4f4f;font-size:12px;margin:0 0 24px;text-align:center">For your security, please update to continue.</p>
-        <a href="https://valcrown.com/download.html" style="background:linear-gradient(135deg,#7c6aff,#a89fff);color:#fff;padding:13px 28px;border-radius:10px;font-weight:700;font-size:15px;text-decoration:none;margin-bottom:12px" onclick="window.valcrown.openExternal('https://valcrown.com/download.html');return false">
-          Download v${latest} →
-        </a>
-        <p style="color:#505080;font-size:11px;margin:0">ValCrown will work again after updating</p>
-      \`;
-      document.body.appendChild(overlay);
-    })();
-  `).catch(() => {});
-}
-// ── END VERSION LOCK ──────────────────────────────────────────────────────────
-
-// ── GAME DETECTION ────────────────────────────────────────────────────────────
-function startGameDetection() {
-  if (gameDetectInterval) clearInterval(gameDetectInterval);
-  let sessionStart = null;
-
-  gameDetectInterval = setInterval(() => {
-    if (os.platform() !== 'win32') return;
-    exec('tasklist /fo csv /nh 2>nul', { windowsHide: true }, (err, stdout) => {
-      if (err) return;
-      const procs = stdout.toLowerCase();
-      let found = null;
-      for (const [proc, game] of Object.entries(GAME_MAP)) {
-        if (procs.includes(proc)) { found = game; break; }
-      }
-
-      // Custom target
-      const targetApp = store.get('targetApp');
-      if (!found && targetApp) {
-        const tname = targetApp.name.toLowerCase().replace(/ /g,'') + '.exe';
-        if (procs.includes(tname)) found = targetApp;
-      }
-
-      if (found && !currentGame) {
-        currentGame  = found;
-        sessionStart = Date.now();
-        applyBoost(found.name);
-        startSessionTick(Date.now());
-        mainWindow?.webContents.send('game-detected', found);
-        updateTray(found);
-        showNotif(`${found.name} Detected`, `Boost activated for ${found.name}`);
-        log(`[Game] Detected: ${found.name}`);
-      } else if (!found && currentGame) {
-        const durationMs  = sessionStart ? Date.now() - sessionStart : 0;
-        const durationMin = Math.round(durationMs / 60000);
-        const session     = { game: currentGame, durationFormatted: durationMin + 'm', durationMin };
-        mainWindow?.webContents.send('game-ended', session);
-        saveSession(session);
-        revertBoost();
-      stopSessionTick();
-        updateTray(null);
-        showNotif('Session Ended', `${currentGame.name} — ${durationMin}m`);
-        log(`[Game] Ended: ${currentGame.name} — ${durationMin}m`);
-        currentGame  = null;
-        sessionStart = null;
-      }
-    });
-  }, 8000);
-}
-
-function stopGameDetection() {
-  if (gameDetectInterval) { clearInterval(gameDetectInterval); gameDetectInterval = null; }
-}
-
-// ── SESSION HISTORY ───────────────────────────────────────────────────────────
-function saveSession(session) {
-  const history = store.get('sessionHistory', []);
-  history.unshift({ game: session.game, duration: session.durationFormatted, date: new Date().toLocaleDateString() });
-  store.set('sessionHistory', history.slice(0, 20));
-
-  // ── SESSION TICK ─────────────────────────────────────────────────────────
-  let sessionTickInterval = null;
-  function startSessionTick(startTime) {
-    if (sessionTickInterval) clearInterval(sessionTickInterval);
-    sessionTickInterval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startTime) / 1000);
-      if (mainWindow) mainWindow.webContents.send('session-tick', elapsed);
-    }, 1000);
-  }
-  function stopSessionTick() {
-    if (sessionTickInterval) { clearInterval(sessionTickInterval); sessionTickInterval = null; }
-  }
-}
-
-// ── BOOST ─────────────────────────────────────────────────────────────────────
-function applyBoost(gameName, mode = 'safe') {
-  if (os.platform() !== 'win32') return;
-  boostActive = true;
-  const cmds = [
-    'powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c',
-    'reg add "HKCU\\System\\GameConfigStore" /v GameDVR_Enabled /t REG_DWORD /d 0 /f',
-    'reg add "HKLM\\SYSTEM\\CurrentControlSet\\Control\\GraphicsDrivers" /v HwSchMode /t REG_DWORD /d 2 /f',
-    'netsh int tcp set global autotuninglevel=normal',
-    'netsh int tcp set global rss=enabled',
-  ];
-  if (gameName) cmds.push(`wmic process where name="${gameName}.exe" CALL setpriority "high priority"`);
-  if (mode === 'aggressive') {
-    cmds.push('sc stop SysMain', 'sc stop WSearch');
-    cmds.push('reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters" /v TcpAckFrequency /t REG_DWORD /d 1 /f');
-    cmds.push('reg add "HKLM\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters" /v TCPNoDelay /t REG_DWORD /d 1 /f');
-  }
-  exec(cmds.join(' & '), { windowsHide: true }, (err) => {
-    if (err) log('[Boost] Error: ' + err.message);
-    else log('[Boost] Applied: ' + mode);
+// ── WINDOWS ───────────────────────────────────────────────────────────────────
+function createOnboard() {
+  obWin = new BrowserWindow({
+    width: 420, height: 580, resizable: false, frame: false,
+    webPreferences: { preload: path.join(__dirname,'preload.js'), contextIsolation:true, nodeIntegration:false },
+    show: false,
   });
+  obWin.loadFile(path.join(__dirname,'../renderer/src/onboard.html'));
+  obWin.once('ready-to-show', () => obWin.show());
+  obWin.on('closed', () => { obWin = null; });
 }
 
-function revertBoost() {
-  if (os.platform() !== 'win32') return;
-  boostActive = false;
-  exec([
-    'powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e',
-    'sc start SysMain',
-  ].join(' & '), { windowsHide: true });
-  log('[Boost] Reverted');
+function createMain() {
+  mainWin = new BrowserWindow({
+    width: 1020, height: 680, minWidth: 820, minHeight: 560, frame: false,
+    webPreferences: { preload: path.join(__dirname,'preload.js'), contextIsolation:true, nodeIntegration:false },
+    show: false,
+  });
+  mainWin.loadFile(path.join(__dirname,'../renderer/src/index.html'));
+  if (IS_DEV) mainWin.webContents.openDevTools({ mode: 'detach' });
+  mainWin.once('ready-to-show', () => {
+    mainWin.show();
+    initTray();
+    startWatch();
+    versionCheck();
+  });
+  mainWin.on('close', (e) => { e.preventDefault(); mainWin.hide(); });
+  mainWin.on('closed', () => { mainWin = null; });
 }
 
 // ── TRAY ──────────────────────────────────────────────────────────────────────
-function createTray() {
-  const icon = nativeImage.createEmpty();
-  tray = new Tray(icon);
-  tray.setToolTip('ValCrown');
-  updateTray(null);
-  tray.on('click', () => {
-    if (mainWindow) mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
-    else createMainWindow();
-  });
-}
-
-
-// ── LICENSE CHECK ON STARTUP ─────────────────────────────────────────────────
-async function checkLicenseValid() {
-  const token = store.get('accessToken');
-  if (!token || token === 'GUEST') return false;
+function initTray() {
   try {
-    const https = require('https');
-    return new Promise((resolve) => {
-      const req = https.get(API_URL + '/api/auth/me', {
-        headers: { 'Authorization': 'Bearer ' + token }
-      }, (res) => {
-        resolve(res.statusCode === 200);
-      });
-      req.on('error', () => resolve(true)); // network error — allow offline
-      req.setTimeout(5000, () => { req.destroy(); resolve(true); });
-    });
-  } catch(e) { return true; }
+    const iconPath = path.join(__dirname,'../renderer/src/assets/icon.png');
+    const img = nativeImage.createFromPath(iconPath).resize({ width: 16, height: 16 });
+    tray = new Tray(img);
+    tray.on('click', () => { if(mainWin){ mainWin.show(); mainWin.focus(); } });
+    setTray(null);
+  } catch(e) { log('[Tray] ' + e.message); }
 }
-// ── END LICENSE CHECK ─────────────────────────────────────────────────────────
 
-function updateTray(game) {
+function setTray(game) {
   if (!tray) return;
-  const items = [
-    { label: game ? `🎮 Boosting ${game.name}` : 'ValCrown — Idle', enabled: false },
+  tray.setToolTip(game ? 'ValCrown — Boosting ' + game.name : 'ValCrown');
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: game ? '⚡ ' + game.name : '🎮 No game running', enabled: false },
     { type: 'separator' },
-    { label: 'Open ValCrown', click: () => { mainWindow?.show() || createMainWindow(); } },
-    { label: 'Quit', click: () => app.quit() }
-  ];
-  tray.setContextMenu(Menu.buildFromTemplate(items));
-  tray.setToolTip(game ? `ValCrown — Boosting ${game.name}` : 'ValCrown');
+    { label: 'Open',  click: () => { if(mainWin){ mainWin.show(); mainWin.focus(); } } },
+    { label: 'Quit',  click: () => app.exit(0) },
+  ]));
 }
 
-// ── NOTIFICATIONS ─────────────────────────────────────────────────────────────
-function showNotif(title, body) {
-  try { new Notification({ title: `ValCrown — ${title}`, body }).show(); } catch(e) {}
-}
+// ── GAME WATCHER ──────────────────────────────────────────────────────────────
+function startWatch() {
+  watchLoop = setInterval(async () => {
+    const procs = await Scanner.getProcesses();
+    const names = procs.map(p => p.name.toLowerCase());
+    const found = Optimizer.KNOWN_GAMES.find(g => names.includes(g.exe.toLowerCase()));
 
-// ── WINDOWS ───────────────────────────────────────────────────────────────────
-function createOnboardWindow() {
-  onboardWindow = new BrowserWindow({
-    width: 520, height: 680,
-    frame: false, resizable: false,
-    backgroundColor: '#080808',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: false
-    },
-    center: true, show: false,
-  });
-  onboardWindow.loadFile(path.join(__dirname, '../renderer/src/onboard.html'));
-  onboardWindow.once('ready-to-show', () => onboardWindow.show());
-  onboardWindow.on('closed', () => { onboardWindow = null; });
-}
-
-function createMainWindow() {
-  mainWindow = new BrowserWindow({
-    width: 1100, height: 720,
-    minWidth: 900, minHeight: 600,
-    frame: false,
-    backgroundColor: '#080808',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: false,
-      backgroundThrottling: false,
-    },
-    center: true, show: false,
-  });
-
-  mainWindow.loadFile(path.join(__dirname, '../renderer/src/index.html'));
-
-  mainWindow.once('ready-to-show', () => {
-    // Version lock check
-    checkVersionLock().then(({ isOutdated, latest }) => {
-      if (isOutdated && latest) {
-        log('[Version] Outdated: current=' + app.getVersion() + ' latest=' + latest);
-        setTimeout(() => showUpdateLockScreen(mainWindow, latest), 2000);
-      } else {
-        log('[Version] Up to date: ' + app.getVersion());
+    if (found && (!curGame || curGame.exe !== found.exe)) {
+      curGame   = found;
+      sessStart = Date.now();
+      if (!boosted) {
+        const r = await Optimizer.apply(found.exe, store.get('boostMode','safe'));
+        boosted = r.success;
       }
+      if (mainWin) mainWin.webContents.send('ev-game', found);
+      setTray(found);
+      startTick();
+      log('[Watch] Game: ' + found.name);
+    } else if (!found && curGame) {
+      const dur = sessStart ? Math.floor((Date.now()-sessStart)/1000) : 0;
+      const sess = { game: curGame.name, duration: dur, date: new Date().toISOString() };
+      const hist = store.get('sessions', []);
+      hist.unshift(sess);
+      store.set('sessions', hist.slice(0, 30));
+      if (mainWin) mainWin.webContents.send('ev-end', sess);
+      await Optimizer.revert();
+      boosted   = false;
+      curGame   = null;
+      sessStart = null;
+      setTray(null);
+      stopTick();
+      log('[Watch] Game ended (' + dur + 's)');
+    }
+  }, 3000);
+}
+
+function startTick() {
+  stopTick();
+  sessTick = setInterval(() => {
+    if (!sessStart || !mainWin) return;
+    mainWin.webContents.send('ev-tick', Math.floor((Date.now()-sessStart)/1000));
+  }, 1000);
+}
+
+function stopTick() {
+  if (sessTick) { clearInterval(sessTick); sessTick = null; }
+}
+
+// ── VERSION CHECK ─────────────────────────────────────────────────────────────
+function versionCheck() {
+  https.get(API + '/api/app/version', { headers: { 'User-Agent': 'ValCrown/' + VER } }, res => {
+    let d = '';
+    res.on('data', c => d += c);
+    res.on('end', () => {
+      try {
+        const latest = JSON.parse(d).version || VER;
+        const parse  = v => v.replace(/^v/,'').split('.').map(Number);
+        const [lM,lN,lP] = parse(latest);
+        const [cM,cN,cP] = parse(VER);
+        const old = lM>cM||(lM===cM&&lN>cN)||(lM===cM&&lN===cN&&lP>cP);
+        if (old && mainWin) mainWin.webContents.send('ev-update', { latest });
+      } catch {}
     });
-    mainWindow.show();
-    if (isDev) mainWindow.webContents.openDevTools();
-    if (currentGame) mainWindow.webContents.send('game-detected', currentGame);
-    log('[App] Main window ready');
-  });
-
-  mainWindow.on('close', (e) => {
-    e.preventDefault();
-    mainWindow.hide();
-  });
-
-  mainWindow.on('closed', () => { mainWindow = null; });
+  }).on('error', () => {});
 }
 
-// ── APP READY ─────────────────────────────────────────────────────────────────
-
-ipcMain.handle('get-device-vid', async () => {
-  return getMachineId();
-});
-
-ipcMain.handle('get-os-info', async () => {
-  return {
-    platform: os.platform(),
-    release:  os.release(),
-    arch:     os.arch(),
-    hostname: os.hostname(),
-  };
-});
+// ── APP LIFECYCLE ─────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
-  log('[App] Starting ValCrown');
-  createTray();
-
   const token = store.get('accessToken');
-  if (!token || token === '') {
-    createOnboardWindow();
-  } else {
-    createMainWindow();
-    startGameDetection();
-  }
+  if (token) createMain(); else createOnboard();
+});
+app.on('window-all-closed', () => {});
+app.on('before-quit', async () => {
+  if (watchLoop) clearInterval(watchLoop);
+  stopTick();
+  if (boosted) await Optimizer.revert();
 });
 
-app.on('window-all-closed', () => { /* stay in tray */ });
+// ── IPC ───────────────────────────────────────────────────────────────────────
+// Window
+ipcMain.on('win-min',   () => (mainWin||obWin)?.minimize());
+ipcMain.on('win-max',   () => { if(mainWin) mainWin.isMaximized()?mainWin.unmaximize():mainWin.maximize(); });
+ipcMain.on('win-hide',  () => (mainWin||obWin)?.hide());
+ipcMain.on('ob-close',  () => obWin?.close());
 
-app.on('before-quit', () => {
-  stopGameDetection();
-  if (boostActive) revertBoost();
-  log('[App] Quitting');
-});
-
-// ── IPC HANDLERS ──────────────────────────────────────────────────────────────
-
-// Window controls
-
-function getMachineId() {
-  const crypto = require('crypto');
-  const parts  = [
-    os.hostname(),
-    os.platform(),
-    os.arch(),
-    os.cpus()[0]?.model || 'cpu',
-    String(os.totalmem()),
-    os.userInfo().username || 'user',
-  ];
-  return crypto.createHash('sha256').update(parts.join('|')).digest('hex').slice(0, 32).toUpperCase();
-}
-ipcMain.on('window-minimize',      () => (mainWindow || onboardWindow)?.minimize());
-ipcMain.on('window-maximize',      () => { if (mainWindow) mainWindow.isMaximized() ? mainWindow.unmaximize() : mainWindow.maximize(); });
-ipcMain.on('window-close',         () => (mainWindow || onboardWindow)?.hide());
-ipcMain.on('window-close-onboard', () => onboardWindow?.close());
-
-// Storage
-ipcMain.handle('store-get',    (_, key)        => store.get(key));
-ipcMain.handle('store-set',    (_, key, value) => {
-  // Security: only allow known safe keys — prevent prototype pollution
-  const ALLOWED_KEYS = [
-    'accessToken','refreshToken','user','license','deviceId','targetApp',
-    'sessionHistory','startupEnabled','userEmail','userPlan','licenseKey',
-    'licenseExpiry','guestMode','appVersion','settings','onboarded'
-  ];
-  if (!ALLOWED_KEYS.includes(String(key))) {
-    log('[Security] Blocked store-set for unknown key: ' + key);
-    return false;
-  }
-  store.set(key, value);
-  return true;
-});
-ipcMain.handle('store-delete', (_, key)        => { store.delete(key); return true; });
-ipcMain.handle('store-clear',  ()              => { store.clear(); return true; });
+// Store — whitelist only
+const KEYS = ['accessToken','refreshToken','user','license','targetApp','sessions',
+  'boostMode','startupEnabled','deviceId','userEmail','settings'];
+ipcMain.handle('s-get',   (_, k)   => store.get(k));
+ipcMain.handle('s-set',   (_, k,v) => { if(!KEYS.includes(k)) return false; store.set(k,v); return true; });
+ipcMain.handle('s-clear', ()       => { store.clear(); return true; });
 
 // Auth
-ipcMain.on('onboard-complete', (_, data) => {
-  store.set('accessToken',  data.accessToken);
-  store.set('refreshToken', data.refreshToken);
-  store.set('user',         data.user);
-  store.set('license',      data.license);
-  createMainWindow();
-  startGameDetection();
-  setTimeout(() => onboardWindow?.close(), 300);
-  log('[Auth] Login complete');
+ipcMain.on('auth-login', (_, d) => {
+  store.set('accessToken',  d.accessToken);
+  store.set('refreshToken', d.refreshToken);
+  store.set('user',         JSON.stringify(d.user||{}));
+  store.set('license',      JSON.stringify(d.license||{}));
+  obWin?.close();
+  createMain();
 });
-
-ipcMain.on('logout', () => {
-  stopGameDetection();
-  if (boostActive) revertBoost();
+ipcMain.on('auth-logout', () => {
   store.clear();
-  updateTray(null);
-  createOnboardWindow();
-  setTimeout(() => { mainWindow?.destroy(); mainWindow = null; }, 400);
-  log('[Auth] Logout');
+  if (mainWin) { mainWin.destroy(); mainWin = null; }
+  createOnboard();
 });
 
-// System info
-ipcMain.handle('get-system-info', async () => {
-  return Engine.getSystemInfo();
+// System
+ipcMain.handle('sys-info',    () => Scanner.getSystemInfo());
+ipcMain.handle('cpu-usage',   () => Scanner.getCpuUsage());
+ipcMain.handle('ram-usage',   () => Scanner.getRamUsage());
+ipcMain.handle('app-version', () => VER);
+ipcMain.handle('get-procs',   () => Scanner.getProcesses());
+ipcMain.handle('kill-proc',   (_, p) => Optimizer.killProcess(p));
+ipcMain.handle('clean-ram',   () => Optimizer.cleanRam());
+ipcMain.handle('ac-check',    () => Scanner.checkAntiCheat());
+ipcMain.handle('ping',        (_, h) => Scanner.ping(h));
+ipcMain.handle('flush-dns',   () => Optimizer.flushDns());
+ipcMain.handle('tcp-opt',     () => Optimizer.optimizeTcp());
+ipcMain.handle('set-dns',     (_, p,s) => Optimizer.setDns(p, s));
+ipcMain.handle('boost',       (_, n,m) => { return Optimizer.apply(n,m).then(r => { if(r.success) boosted=true; return r; }); });
+ipcMain.handle('revert',      () => Optimizer.revert().then(r => { boosted=false; return r; }));
+ipcMain.handle('boost-active',() => boosted);
+ipcMain.handle('set-startup', (_, e) => Optimizer.setStartup(e, process.execPath).then(r => { if(r.ok) store.set('startupEnabled',e); return r; }));
+ipcMain.handle('get-startup', () => Optimizer.getStartupEnabled());
+ipcMain.handle('current-game',() => curGame);
+ipcMain.handle('sessions',    () => store.get('sessions', []));
+ipcMain.handle('steam-games', () => Scanner.getSteamGames());
+ipcMain.handle('is-guest',    () => !store.get('accessToken'));
+ipcMain.handle('pick-app',    async () => {
+  if (!mainWin) return null;
+  const r = await dialog.showOpenDialog(mainWin, { properties:['openFile'], filters:[{name:'Apps',extensions:['exe']}] });
+  return r.canceled ? null : { path: r.filePaths[0], name: require('path').basename(r.filePaths[0]) };
 });
 
-// CPU/RAM
-ipcMain.handle('get-cpu-usage', async () => {
-  return Engine.getCpuUsage();
+ipcMain.on('open-url', (_, u) => {
+  try { const p = new URL(u); if(['https:','http:','mailto:'].includes(p.protocol)) shell.openExternal(u); } catch {}
 });
-
-ipcMain.handle('get-ram-usage', () => {
-  const total = os.totalmem();
-  const free  = os.freemem();
-  return { usedPct: Math.round(((total - free) / total) * 100), totalGb: Math.round(total/1073741824), freeGb: Math.round(free/1073741824), usedGb: Math.round((total-free)/1073741824) };
+ipcMain.on('notify', (_, t, b) => {
+  if (Notification.isSupported()) new Notification({ title: String(t||'').slice(0,100), body: String(b||'').slice(0,200) }).show();
 });
-
-// Processes
-ipcMain.handle('get-processes', async () => {
-  return Engine.getProcesses();
-});
-
-ipcMain.handle('kill-process', (_, pid) => new Promise((resolve) => {
-  if (pid <= 4) { resolve({ success: false, reason: 'System process' }); return; }
-  exec(`taskkill /PID ${pid} /F`, { windowsHide: true }, (err) => {
-    resolve({ success: !err, reason: err?.message });
-  });
-}));
-
-ipcMain.handle('clean-ram', () => new Promise((resolve) => {
-  exec('wmic process get WorkingSetSize 2>nul', { windowsHide: true }, () => {});
-  resolve({ success: true });
-}));
-
-// Anti-cheat check
-ipcMain.handle('check-anticheat', async () => {
-  return Engine.checkAntiCheat();
-});
-
-// Network
-ipcMain.handle('ping-host', (_, host = '8.8.8.8') => new Promise((resolve) => {
-  // Security: validate host is safe IP or hostname — no shell injection
-  const safeHost = String(host).trim();
-  const ipRegex = /^[a-zA-Z0-9.\-]{1,64}$/;
-  if (!ipRegex.test(safeHost) || safeHost.includes('..') || safeHost.includes(';') || safeHost.includes('&') || safeHost.includes('|')) {
-    return resolve(null);
-  }
-  host = safeHost;
-  const start = Date.now();
-  exec(`ping -n 1 ${host}`, { windowsHide: true }, (err, stdout) => {
-    if (err) { resolve({ ms: 999, host, success: false }); return; }
-    const match = stdout.match(/time[<=](\d+\.?\d*)\s*ms/i) || stdout.match(/(\d+\.?\d*)\s*ms/);
-    resolve({ ms: match ? Math.round(parseFloat(match[1])) : Date.now()-start, host, success: true });
-  });
-}));
-
-ipcMain.handle('flush-dns', async () => {
-  const r = await Engine.flushDns();
-  log('[Net] DNS flushed: ' + r.steps.filter(s=>s.ok).map(s=>s.label).join(', '));
-  return r;
-});
-
-ipcMain.handle('optimize-tcp', async () => {
-  const r = await Engine.optimizeNetwork();
-  log('[Net] TCP optimized: ' + (r.applied||[]).join(', '));
-  return r;
-});
-
-ipcMain.handle('set-dns', (_, primary, secondary) => new Promise((resolve) => {
-  // Security: validate IP addresses — only allow valid IPv4
-  const ipRegex = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-  if (!ipRegex.test(primary) || !ipRegex.test(secondary)) {
-    return resolve({ success: false, error: 'Invalid IP address format' });
-  }
-  exec(`netsh interface ip set dns "Ethernet" static ${primary} && netsh interface ip add dns "Ethernet" ${secondary} index=2`, { windowsHide: true }, (err) => {
-    resolve({ success: !err });
-  });
-}));
-
-// Boost
-ipcMain.handle('apply-boost', async (_, targetName, mode) => {
-  const m = mode || 'safe';
-  const result = await Engine.apply(targetName, m);
-  boostActive = result.success;
-  log('[Engine] Boost: ' + (result.applied||[]).join(', '));
-  return result;
-});
-
-ipcMain.handle('revert-boost', async () => {
-  const result = await Engine.revert();
-  boostActive = false;
-  log('[Engine] Boost reverted');
-  return result;
-});
-
-ipcMain.handle('boost-isactive', () => boostActive);
-
-// Startup
-ipcMain.handle('set-startup', (_, enabled) => {
-  const r = Engine.setStartup(enabled);
-  if (r.success) store.set('startupEnabled', enabled);
-  return r;
-});
-
-ipcMain.handle('get-startup', () => Engine.getStartupEnabled());
-
-// Game
-ipcMain.handle('get-current-game',   () => currentGame);
-ipcMain.handle('get-session-history',() => store.get('sessionHistory', []));
-ipcMain.handle('get-steam-games', async () => getSteamInstalledGames());
-
-// App selector
-ipcMain.handle('select-app', async () => {
-  if (!mainWindow) return null;
-  const result = await dialog.showOpenDialog(mainWindow, {
-    title: 'Select game or app',
-    properties: ['openFile'],
-    filters: [{ name: 'Applications', extensions: ['exe'] }],
-  });
-  if (!result.canceled && result.filePaths[0]) {
-    const p = result.filePaths[0];
-    return { path: p, name: path.basename(p, '.exe'), icon: '🎮' };
-  }
-  return null;
-});
-
-// Misc
-// Guest mode check
-ipcMain.handle('is-guest', () => store.get('accessToken') === 'GUEST');
-
-ipcMain.handle('get-api-url',        () => API_URL);
-ipcMain.handle('get-version',        () => app.getVersion());
-  ipcMain.handle('check-for-updates', async () => {
-    const result = await checkVersionLock();
-    if (result.isOutdated && result.latest) {
-      showUpdateLockScreen(mainWindow, result.latest);
-    }
-    return result;
-  });
-
-ipcMain.on('open-external', (_, url) => {
-  // Security: only allow safe URLs
-  try {
-    const parsed = new URL(url);
-    const allowed = ['https:', 'http:', 'mailto:'];
-    if (!allowed.includes(parsed.protocol)) {
-      log('[Security] Blocked unsafe URL: ' + url);
-      return;
-    }
-    const trustedDomains = ['valcrown.com', 'github.com', 'stripe.com', 'xogamesltd.com'];
-    const isTrusted = trustedDomains.some(d => parsed.hostname.endsWith(d));
-    if (!isTrusted && parsed.protocol !== 'mailto:') {
-      log('[Security] Warning: opening untrusted URL: ' + parsed.hostname);
-    }
-    shell.openExternal(url);
-  } catch(e) {
-    log('[Security] Invalid URL blocked: ' + url);
-  }
-});
-ipcMain.on('show-notification', (_, { title, body }) => {
-  // Sanitize notification content
-  const safeTitle = String(title || '').slice(0, 100).replace(/[<>]/g, '');
-  const safeBody  = String(body  || '').slice(0, 300).replace(/[<>]/g, '');
-  showNotif(safeTitle, safeBody);
-});
-ipcMain.on('update-tray',            (_, game) => updateTray(game));

@@ -272,9 +272,9 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
     <span style="font-size:9px;color:#7c6aff;background:rgba(124,106,255,0.12);padding:2px 6px;border-radius:4px;font-weight:700">PRO</span>
   </div>
   <div style="display:flex;gap:0;-webkit-app-region:no-drag">
-    <button onclick="window.valcrown.minimize()" style="width:46px;height:32px;background:transparent;border:none;color:#9090c0;font-size:14px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">&#x2212;</button>
-    <button onclick="window.valcrown.maximize()" style="width:46px;height:32px;background:transparent;border:none;color:#9090c0;font-size:14px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">&#x25A1;</button>
-    <button onclick="window.valcrown.close()" style="width:46px;height:32px;background:transparent;border:none;color:#9090c0;font-size:14px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='#e81123';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#9090c0'">&#x2715;</button>
+    <button onclick="window.vc.minimize()" style="width:46px;height:32px;background:transparent;border:none;color:#9090c0;font-size:14px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">&#x2212;</button>
+    <button onclick="window.vc.maximize()" style="width:46px;height:32px;background:transparent;border:none;color:#9090c0;font-size:14px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">&#x25A1;</button>
+    <button onclick="window.vc.hide()" style="width:46px;height:32px;background:transparent;border:none;color:#9090c0;font-size:14px;cursor:pointer;transition:background 0.15s" onmouseover="this.style.background='#e81123';this.style.color='white'" onmouseout="this.style.background='transparent';this.style.color='#9090c0'">&#x2715;</button>
   </div>
 </div>
 <div class="layout" style="height:calc(100vh - 40px)">
@@ -673,7 +673,7 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
             </div>
           </div>
           <div style="display:flex;gap:8px">
-            <button class="btn btn-ghost btn-sm" onclick="window.valcrown.openExternal('https://valcrown.com/dashboard.html')">Dashboard</button>
+            <button class="btn btn-ghost btn-sm" onclick="window.vc.openUrl('https://valcrown.com/dashboard.html')">Dashboard</button>
             <button class="btn btn-red btn-sm" onclick="doLogout()">Sign Out</button>
           </div>
         </div>
@@ -683,7 +683,7 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
         </div>
         <div class="settings-row" style="border:none">
           <div><div class="settings-label">License Expires</div><div class="settings-sub" id="s-expiry">Loading...</div></div>
-          <button class="btn btn-green btn-sm" onclick="window.valcrown.openExternal('https://valcrown.com/pricing.html')">Upgrade</button>
+          <button class="btn btn-green btn-sm" onclick="window.vc.openUrl('https://valcrown.com/pricing.html')">Upgrade</button>
         </div>
       </div>
 
@@ -729,10 +729,10 @@ input:checked + .toggle-slider:before{transform:translateX(16px)}
         <div class="info-row"><span class="info-key">Publisher</span><span class="info-val">XOGAMESLTD</span></div>
         <div class="info-row"><span class="info-key">Support</span><span class="info-val">support@xogamess.com</span></div>
         <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-ghost btn-sm" onclick="window.valcrown.openExternal('https://valcrown.com')">🌐 Website</button>
-          <button class="btn btn-ghost btn-sm" onclick="window.valcrown.openExternal('mailto:support@xogamess.com')">✉️ Support</button>
-          <button class="btn btn-ghost btn-sm" onclick="window.valcrown.openExternal('https://valcrown.com/terms.html')">📄 Terms</button>
-          <button class="btn btn-ghost btn-sm" onclick="window.valcrown.openExternal('https://valcrown.com/privacy.html')">🔒 Privacy</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.vc.openUrl('https://valcrown.com')">🌐 Website</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.vc.openUrl('mailto:support@xogamess.com')">✉️ Support</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.vc.openUrl('https://valcrown.com/terms.html')">📄 Terms</button>
+          <button class="btn btn-ghost btn-sm" onclick="window.vc.openUrl('https://valcrown.com/privacy.html')">🔒 Privacy</button>
         </div>
       </div>
     </div>
@@ -755,13 +755,13 @@ async function checkForUpdatesUI() {
   btn.disabled = true;
   status.style.display = 'none';
   try {
-    const result = await window.valcrown.checkForUpdates();
+    const result = await window.vc.version();
     status.style.display = 'block';
     if (result.isOutdated) {
       status.style.background = 'rgba(255,183,77,0.1)';
       status.style.border = '1px solid rgba(255,183,77,0.3)';
       status.style.color = '#ffb74d';
-      status.innerHTML = '⚠️ Update available: v' + result.latest + ' — <a href="#" onclick="window.valcrown.openExternal('https://valcrown.com/download.html');return false" style="color:#7c6aff">Download now</a>';
+      status.innerHTML = '⚠️ Update available: v' + result.latest + ' — <a href="#" onclick="window.vc.openUrl('https://valcrown.com/download.html');return false" style="color:#7c6aff">Download now</a>';
     } else {
       status.style.background = 'rgba(0,232,122,0.1)';
       status.style.border = '1px solid rgba(0,232,122,0.3)';
@@ -782,11 +782,11 @@ async function checkForUpdatesUI() {
 // Load settings data
 async function loadSettingsPage() {
   try {
-    const token = await window.valcrown.store.get('accessToken');
-    const email = await window.valcrown.store.get('userEmail');
-    const plan  = await window.valcrown.store.get('userPlan');
-    const licenseKey = await window.valcrown.store.get('licenseKey');
-    const expiresAt = await window.valcrown.store.get('licenseExpiry');
+    const token = await window.vc.store.get('accessToken');
+    const email = await window.vc.store.get('userEmail');
+    const plan  = await window.vc.store.get('userPlan');
+    const licenseKey = await window.vc.store.get('licenseKey');
+    const expiresAt = await window.vc.store.get('licenseExpiry');
 
     if (email) {
       document.getElementById('s-email').textContent = email;
@@ -805,13 +805,13 @@ async function loadSettingsPage() {
       document.getElementById('s-expiry').textContent = plan === 'lifetime' ? 'Never — Lifetime License' : 'N/A';
     }
 
-    const v = await window.valcrown.getVersion();
+    const v = await window.vc.version();
     if (v) {
       document.getElementById('s-version').textContent = 'v' + v;
       document.getElementById('s-version-settings').textContent = 'v' + v;
     }
 
-    const startup = await window.valcrown.getStartup();
+    const startup = await window.vc.getStartup();
     document.getElementById('toggle-startup').checked = !!startup;
   } catch(e) {}
 }
@@ -826,18 +826,18 @@ async function loadSettingsPage() {
 // ── ELECTRON BRIDGE — wire IPC events after DOM ready ────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
   // Wire game detection events
-  if (window.valcrown && window.valcrown.onGameDetected) {
-    window.valcrown.onGameDetected(function(game) {
+  if (window.vc && window.vc.onGame) {
+    window.vc.onGame(function(game) {
       if (typeof handleGameDetected === 'function') handleGameDetected(game);
     });
   }
-  if (window.valcrown && window.valcrown.onGameEnded) {
-    window.valcrown.onGameEnded(function(session) {
+  if (window.vc && window.vc.onEnd) {
+    window.vc.onEnd(function(session) {
       if (typeof handleGameEnded === 'function') handleGameEnded(session);
     });
   }
-  if (window.valcrown && window.valcrown.onSessionTick) {
-    window.valcrown.onSessionTick(function(secs) {
+  if (window.vc && window.vc.onTick) {
+    window.vc.onTick(function(secs) {
       var el = document.getElementById('session-time');
       if (el) {
         var m = Math.floor(secs/60), s = secs%60;
@@ -859,7 +859,7 @@ var API = {
   async request(method, endpoint, data, auth) {
     var headers = { 'Content-Type': 'application/json' };
     if (auth) {
-      var token = await window.valcrown.store.get('accessToken');
+      var token = await window.vc.store.get('accessToken');
       if (token) headers['Authorization'] = 'Bearer ' + token;
     }
     var opts = { method: method, headers: headers };
@@ -877,11 +877,11 @@ var API = {
     }
   },
   async refreshToken() {
-    var rt = await window.valcrown.store.get('refreshToken');
+    var rt = await window.vc.store.get('refreshToken');
     if (!rt) return false;
     var res = await this.request('POST', '/api/auth/refresh', { refreshToken: rt });
     if (res.ok && res.data.accessToken) {
-      await window.valcrown.store.set('accessToken', res.data.accessToken);
+      await window.vc.store.set('accessToken', res.data.accessToken);
       return true;
     }
     return false;
@@ -899,15 +899,15 @@ var DeviceID = {
   async get() {
     try {
       // Try real machine fingerprint from IPC first
-      if (window.valcrown.getDeviceVid) {
-        var vid = await window.valcrown.getDeviceVid();
+      if (window.vc.sysInfo) {
+        var vid = await window.vc.sysInfo();
         if (vid && vid.length > 5) {
-          await window.valcrown.store.set('deviceId', vid);
+          await window.vc.store.set('deviceId', vid);
           return vid;
         }
       }
       // Fallback: stored ID
-      var stored = await window.valcrown.store.get('deviceId');
+      var stored = await window.vc.store.get('deviceId');
       if (stored && stored.length > 5) return stored;
       // Last resort: generate stable ID from browser fingerprint
       var canvas = document.createElement('canvas');
@@ -917,7 +917,7 @@ var DeviceID = {
       ctx.fillText('ValCrown', 2, 2);
       var fp = canvas.toDataURL().slice(-20).replace(/[^a-zA-Z0-9]/g,'');
       var id = 'APP-' + (navigator.hardwareConcurrency||4) + '-' + (screen.width||1920) + '-' + fp.slice(0,8).toUpperCase();
-      await window.valcrown.store.set('deviceId', id);
+      await window.vc.store.set('deviceId', id);
       return id;
     } catch(e) { return 'APP-DEFAULT'; }
   }
@@ -1012,17 +1012,17 @@ var POPULAR_APPS = [
 // ── INIT ────────────────────────────────────────────────────
 async function init() {
   // Critical: ensure valcrown bridge is available
-  if (!window.valcrown) {
-    console.error('[Init] window.valcrown not available — preload failed');
+  if (!window.vc) {
+    console.error('[Init] window.vc not available — preload failed');
     document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0f;color:#ff4f4f;font-family:sans-serif;text-align:center"><div><div style="font-size:32px;margin-bottom:12px">⚠️</div><div style="font-size:16px;font-weight:700">App bridge failed to load</div><div style="font-size:13px;color:#666;margin-top:8px">Please restart ValCrown</div></div></div>';
     return;
   }
   try {
     // Load user from storage
-    try { var _u = await window.valcrown.store.get('user'); user = _u ? JSON.parse(_u) : null; } catch(e) { user = null; }
-    try { var _l = await window.valcrown.store.get('license'); license = _l ? JSON.parse(_l) : null; } catch(e) { license = null; }
-    try { var _t = await window.valcrown.store.get('targetApp'); targetApp = _t ? JSON.parse(_t) : null; } catch(e) { targetApp = null; }
-    try { boostMode = await window.valcrown.store.get('boostMode') || 'safe'; } catch(e) {}
+    try { var _u = await window.vc.store.get('user'); user = _u ? JSON.parse(_u) : null; } catch(e) { user = null; }
+    try { var _l = await window.vc.store.get('license'); license = _l ? JSON.parse(_l) : null; } catch(e) { license = null; }
+    try { var _t = await window.vc.store.get('targetApp'); targetApp = _t ? JSON.parse(_t) : null; } catch(e) { targetApp = null; }
+    try { boostMode = await window.vc.store.get('boostMode') || 'safe'; } catch(e) {}
 
     // Update UI with user info
     if (user) {
@@ -1039,7 +1039,7 @@ async function init() {
 
     // Get version
     try {
-      var v = await window.valcrown.getVersion().catch(function(){return null;});
+      var v = await window.vc.version().catch(function(){return null;});
       if (v) setEl('s-version', v);
     } catch(e) {}
 
@@ -1048,7 +1048,7 @@ async function init() {
 
     // Check startup state
     try {
-      var startupEnabled = await window.valcrown.getStartupEnabled().catch(function(){return false;});
+      var startupEnabled = await window.vc.getStartupEnabled().catch(function(){return false;});
       var toggle = document.getElementById('toggle-startup');
       if (toggle) toggle.checked = startupEnabled;
     } catch(e) {}
@@ -1078,7 +1078,7 @@ async function init() {
 
     // Guest mode handling
     try {
-      var isGuest = await window.valcrown.isGuest().catch(function(){return false;});
+      var isGuest = await window.vc.isGuest().catch(function(){return false;});
       if (isGuest) {
         var banner = document.getElementById('guest-banner');
         if (banner) banner.classList.add('show');
@@ -1106,7 +1106,7 @@ async function init() {
 // ── SYSTEM INFO ─────────────────────────────────────────────
 async function loadSystemInfo() {
   try {
-    var sys = await window.valcrown.getSystemInfo().catch(function(){return null;});
+    var sys = await window.vc.sysInfo().catch(function(){return null;});
     if (!sys) return;
     setEl('sys-cpu-name', sys.cpuModel || '--');
     setEl('sys-cpu-cores', (sys.cpuCores || '--') + ' cores');
@@ -1138,8 +1138,8 @@ function startMetrics() { updateMetrics(); setInterval(updateMetrics, 2500); }
 
 async function updateMetrics() {
   try {
-    var cpu = await window.valcrown.getCpuUsage().catch(function(){return 0;});
-    var ram = await window.valcrown.getRamUsage();
+    var cpu = await window.vc.cpuUsage().catch(function(){return 0;});
+    var ram = await window.vc.ramUsage();
     lastCpu = typeof cpu === 'number' ? cpu : 0;
     // ram might be object with usedPct
     if (ram && typeof ram === 'object' && ram.usedPct !== undefined) {
@@ -1171,7 +1171,7 @@ function updateStat(cardId, valId, meterId, val, suffix, warn, bad, color) {
 function startPing() { doPing(); setInterval(doPing, 5000); }
 async function doPing() {
   try {
-    var result = await window.valcrown.pingHost('8.8.8.8');
+    var result = await window.vc.ping('8.8.8.8');
     var ping   = result && typeof result === 'object' ? (result.ms || 999) : (typeof result === 'number' ? result : 999);
     lastPing   = ping;
     ['v-ping','n-ping'].forEach(function(id) { setEl(id, ping); });
@@ -1189,7 +1189,7 @@ async function doPing() {
 // ── BOOST MODE ──────────────────────────────────────────────
 function setMode(m) {
   boostMode = m;
-  window.valcrown.store.set('boostMode', m);
+  window.vc.store.set('boostMode', m);
   var sel = document.getElementById('boost-mode-select');
   if (sel) sel.value = m;
   // Update mode buttons
@@ -1223,7 +1223,7 @@ async function toggleBoost() {
   });
   boostActive = !boostActive;
   if (boostActive) {
-    var result = await window.valcrown.applyBoost((targetApp && targetApp.name) || '', boostMode);
+    var result = await window.vc.boost((targetApp && targetApp.name) || '', boostMode);
     updateBoostUI(true, name);
     if (result && result.success) {
       var tweaks = result.applied || ['Power plan','GameDVR disabled','Timer optimized'];
@@ -1237,7 +1237,7 @@ async function toggleBoost() {
       log('⚠️ Boost failed — run app as Administrator');
     }
   } else {
-    await window.valcrown.revertBoost();
+    await window.vc.revert();
     updateBoostUI(false, (targetApp && targetApp.name) ? 'Boost ' + targetApp.name : 'Activate Boost');
     log('⏹ Boost deactivated');
   }
@@ -1279,7 +1279,7 @@ async function loadSteamGames() {
   if (!el) return;
   el.innerHTML = '<div style="font-size:12px;color:var(--t3);padding:10px">Scanning Steam library...</div>';
   try {
-    var games = await window.valcrown.getSteamGames().catch(function(){ return []; });
+    var games = await window.vc.steamGames().catch(function(){ return []; });
     if (!games || games.length === 0) {
       el.innerHTML = '<div style="font-size:12px;color:var(--t3);padding:10px">No Steam games found or Steam not installed.</div>';
       return;
@@ -1299,7 +1299,7 @@ async function loadSteamGames() {
 async function checkAntiCheat(silent) {
   var el = document.getElementById('anticheat-result');
   var badge = document.getElementById('anticheat-badge');
-  var result = await window.valcrown.checkAntiCheat();
+  var result = await window.vc.acCheck();
   if (!result) { if (el) el.innerHTML = '<span style="color:var(--t3)">Could not scan — run as Administrator</span>'; return; }
   var safe = result.safe !== false;
   var warning = result.warning || (safe ? 'No anti-cheat detected — safe to boost' : 'Anti-cheat active');
@@ -1317,7 +1317,7 @@ async function checkAntiCheat(silent) {
 // ── GAME DETECTION ──────────────────────────────────────────
 function handleGameDetected(game) {
   currentGame = game;
-  if (!boostActive) { boostActive = true; updateBoostUI(true, 'Boosting ' + game.name); window.valcrown.applyBoost(game.name, boostMode); }
+  if (!boostActive) { boostActive = true; updateBoostUI(true, 'Boosting ' + game.name); window.vc.boost(game.name, boostMode); }
   var card = document.getElementById('game-card');
   var noGame = document.getElementById('no-game-card');
   if (card) { card.style.display='flex'; setEl('gc-icon', game.icon||'🎮'); setEl('gc-name', game.name); setEl('gc-genre', game.genre||'Gaming'); setEl('session-time','0m 0s'); }
@@ -1339,7 +1339,7 @@ function handleGameEnded(session) {
   var noGame = document.getElementById('no-game-card');
   if (card) card.style.display='none';
   if (noGame) noGame.style.display='flex';
-  if (!targetApp) { boostActive=false; updateBoostUI(false,'Activate Boost'); window.valcrown.revertBoost(); }
+  if (!targetApp) { boostActive=false; updateBoostUI(false,'Activate Boost'); window.vc.revert(); }
   // Save to history
   saveSessionHistory(session);
   loadSessionHistory();
@@ -1348,11 +1348,11 @@ function handleGameEnded(session) {
 
 async function saveSessionHistory(session) {
   try {
-    var stored = await window.valcrown.store.get('sessionHistory');
+    var stored = await window.vc.store.get('sessionHistory');
     var history = stored ? JSON.parse(stored) : [];
     history.unshift({ game: session.game, duration: session.durationFormatted, date: new Date().toLocaleDateString() });
     if (history.length > 20) history = history.slice(0, 20);
-    await window.valcrown.store.set('sessionHistory', JSON.stringify(history));
+    await window.vc.store.set('sessionHistory', JSON.stringify(history));
   } catch(e) {}
 }
 
@@ -1360,7 +1360,7 @@ async function loadSessionHistory() {
   var el = document.getElementById('session-history');
   if (!el) return;
   try {
-    var stored  = await window.valcrown.store.get('sessionHistory');
+    var stored  = await window.vc.store.get('sessionHistory');
     var history = stored ? JSON.parse(stored) : [];
     if (!history.length) { el.innerHTML='<div class="empty">No sessions yet — start a game!</div>'; return; }
     el.innerHTML = history.map(function(s) {
@@ -1390,7 +1390,7 @@ function setQuickApp(name) {
 
 async function setTarget(app) {
   targetApp = app;
-  await window.valcrown.store.set('targetApp', JSON.stringify(app));
+  await window.vc.store.set('targetApp', JSON.stringify(app));
   showTargetApp(app);
   setEl('dash-target-hint', 'Target: ' + app.name);
   log('🎯 Target set: ' + app.name);
@@ -1458,7 +1458,7 @@ async function revertAll() {
   const fixBtn = document.getElementById('fix-main-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Reverting...'; }
   try {
-    await window.valcrown.revertBoost();
+    await window.vc.revert();
     fixActive = false;
     if (fixBtn) { fixBtn.className = 'fix-btn-main'; fixBtn.textContent = '⚡ Fix My Game Performance'; }
     const status = document.getElementById('fix-status');
@@ -1483,7 +1483,7 @@ async function fixMyGame() {
     btn.disabled = true;
     btn.textContent = '↩️ Reverting...';
     try {
-      await window.valcrown.revertBoost();
+      await window.vc.revert();
       fixActive = false;
       btn.className = 'fix-btn-main';
       btn.textContent = '⚡ Fix My Game Performance';
@@ -1524,7 +1524,7 @@ async function fixMyGame() {
   });
 
   try {
-    await window.valcrown.applyBoost(currentGame?.name || null, boostMode || 'safe');
+    await window.vc.boost(currentGame?.name || null, boostMode || 'safe');
     fixActive = true;
 
     setTimeout(() => {
@@ -1555,9 +1555,9 @@ async function runSystemScan() {
   try {
     // Collect real system data
     const [procs, startup, ping] = await Promise.all([
-      window.valcrown.getProcesses().catch(() => []),
-      window.valcrown.getStartup().catch(() => false),
-      window.valcrown.pingHost('8.8.8.8').catch(() => null),
+      window.vc.getProcs().catch(() => []),
+      window.vc.getStartup().catch(() => false),
+      window.vc.ping('8.8.8.8').catch(() => null),
     ]);
 
     // Analyze problems
@@ -1690,7 +1690,7 @@ async function runBenchmark() {
     result.innerHTML = '<div style="text-align:center;padding:8px;color:var(--t3);font-size:12px">Applying optimizations...</div>';
 
     // Apply boost if not active
-    if (!boostActive) await window.valcrown.applyBoost(currentGame?.name || 'game', boostMode);
+    if (!boostActive) await window.vc.boost(currentGame?.name || 'game', boostMode);
 
     // Wait 2s for changes to take effect
     await new Promise(r => setTimeout(r, 2000));
@@ -1746,7 +1746,7 @@ async function runBenchmark() {
 async function measureSystem() {
   try {
     // Get process list to estimate CPU/RAM
-    const procs = await window.valcrown.getProcesses();
+    const procs = await window.vc.getProcs();
     const totalRam = procs.reduce((sum, p) => sum + (parseInt(p.mem) || 0), 0);
     // Estimate CPU from process count and memory pressure
     const heavyProcs = procs.filter(p => (parseInt(p.mem) || 0) > 100).length;
@@ -1759,7 +1759,7 @@ async function measureSystem() {
 
 async function clearTarget() {
   targetApp = null;
-  await window.valcrown.store.delete('targetApp');
+  await window.vc.store.delete('targetApp');
   var noT = document.getElementById('no-target');
   var hasT = document.getElementById('has-target');
   if (noT) noT.style.display='block';
@@ -1773,7 +1773,7 @@ async function clearTarget() {
 async function loadProcs() {
   var list = document.getElementById('proc-list');
   if (list) list.innerHTML='<div class="empty">Loading...</div>';
-  var procs = await window.valcrown.getProcesses();
+  var procs = await window.vc.getProcs();
   if (!procs || !procs.length) { if (list) list.innerHTML='<div class="empty">No processes</div>'; return; }
   if (list) list.innerHTML = procs.slice(0,30).map(function(p) {
     var badge = p.isAntiCheat ? '<span class="tag tag-yellow" style="font-size:9px">ANTI-CHEAT</span>' :
@@ -1788,7 +1788,7 @@ async function loadProcs() {
 
 
 async function killProc(pid, name) {
-  var result = await window.valcrown.killProcess(pid);
+  var result = await window.vc.killProc(pid);
   if (result && result.success) {
     var el = document.getElementById('proc-' + pid);
     if (el) el.remove();
@@ -1801,7 +1801,7 @@ async function killProc(pid, name) {
 // ── RAM CLEAN ───────────────────────────────────────────────
 async function doCleanRam() {
   log('🧹 Cleaning RAM...');
-  var result = await window.valcrown.cleanRam();
+  var result = await window.vc.cleanRam();
   if (result && result.success) log('🧹 RAM cleaned — ' + (result.processescleaned||0) + ' processes optimized');
   else log('⚠️ RAM clean failed');
 }
@@ -1810,21 +1810,21 @@ async function doCleanRam() {
 async function doFlushDns() {
   var btn = document.getElementById('dns-btn');
   if (btn) { btn.textContent='Flushing...'; btn.disabled=true; }
-  var result = await window.valcrown.flushDns();
+  var result = await window.vc.flushDns();
   if (btn) { btn.textContent='🌐 Flush DNS Cache'; btn.disabled=false; }
   if (result && result.success) log('🌐 DNS flushed + Winsock reset');
   else log('⚠️ DNS flush failed — run as administrator');
 }
 
 async function doTcpOpt() {
-  var result = await window.valcrown.optimizeTcp();
+  var result = await window.vc.tcpOpt();
   if (result && result.success) log('⚡ TCP optimized — ' + (result.applied||[]).slice(0,2).join(', '));
   else log('⚠️ TCP optimization failed');
 }
 
 async function setDns(primary, secondary) {
   log('🌐 Setting DNS: ' + primary + ' / ' + secondary + '...');
-  var result = await window.valcrown.setDns(primary, secondary);
+  var result = await window.vc.setDns(primary, secondary);
   if (result && result.success) log('🌐 DNS set: ' + primary + ' / ' + secondary);
   else log('⚠️ DNS change failed — run as administrator');
 }
@@ -1835,7 +1835,7 @@ async function setDns(primary, secondary) {
 
 // ── STARTUP TOGGLE ──────────────────────────────────────────
 async function toggleStartup(enabled) {
-  var result = await window.valcrown.setStartup(enabled);
+  var result = await window.vc.setStartup(enabled);
   log((enabled ? '🚀 Startup enabled' : '🚀 Startup disabled'));
 }
 
@@ -1881,12 +1881,12 @@ async function validateSession() {
 
 // ── LOGOUT ──────────────────────────────────────────────────
 function doSignIn() {
-  window.valcrown.store.clear().then(function() { window.location.reload(); });
+  window.vc.store.clear().then(function() { window.location.reload(); });
 }
 
 async function doLogout() {
-  try { var rt = await window.valcrown.store.get('refreshToken'); if (rt) await API.logout(rt); } catch(e) {}
-  await window.valcrown.store.clear();
+  try { var rt = await window.vc.store.get('refreshToken'); if (rt) await API.logout(rt); } catch(e) {}
+  await window.vc.store.clear();
   window.location.reload();
 }
 

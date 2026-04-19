@@ -55,7 +55,7 @@ input,button{font-family:var(--sans);-webkit-app-region:no-drag}
 </head>
 <body>
 <div class="titlebar">
-  <button class="wbtn cl" onclick="window.valcrown.closeOnboard()">✕</button>
+  <button class="wbtn cl" onclick="window.vc.closeOnboard()">✕</button>
 </div>
 <div class="wrap">
   <div class="logo">
@@ -83,7 +83,7 @@ input,button{font-family:var(--sans);-webkit-app-region:no-drag}
         <input class="finp" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password">
       </div>
       <button class="fbtn" id="login-btn" onclick="doLogin()">Sign In</button>
-      <div class="footer"><a href="https://valcrown.com/forgot" onclick="event.preventDefault();window.valcrown.openExternal('https://valcrown.com/forgot')">Forgot password?</a></div>
+      <div class="footer"><a href="https://valcrown.com/forgot" onclick="event.preventDefault();window.vc.openExternal('https://valcrown.com/forgot')">Forgot password?</a></div>
     </div>
 
     <!-- REGISTER -->
@@ -105,7 +105,7 @@ input,button{font-family:var(--sans);-webkit-app-region:no-drag}
         <input class="finp" id="reg-key" type="text" placeholder="VC-XXXX-XXXX-XXXX">
       </div>
       <button class="fbtn" id="reg-btn" onclick="doRegister()">Create Account</button>
-      <div class="footer"><a href="https://valcrown.com/buy" onclick="event.preventDefault();window.valcrown.openExternal('https://valcrown.com/buy')">Get a license key →</a></div>
+      <div class="footer"><a href="https://valcrown.com/buy" onclick="event.preventDefault();window.vc.openExternal('https://valcrown.com/buy')">Get a license key →</a></div>
     </div>
 
     <!-- Guest / Demo access -->
@@ -119,7 +119,7 @@ input,button{font-family:var(--sans);-webkit-app-region:no-drag}
         👀 Explore without account
       </button>
       <div style="text-align:center;margin-top:10px;font-size:11px;color:var(--t3)">
-        Limited features · <a href="https://valcrown.com" onclick="event.preventDefault();window.valcrown.openExternal('https://valcrown.com')" style="color:var(--ac);text-decoration:none">Get full access →</a>
+        Limited features · <a href="https://valcrown.com" onclick="event.preventDefault();window.vc.openExternal('https://valcrown.com')" style="color:var(--ac);text-decoration:none">Get full access →</a>
       </div>
     </div>
 
@@ -196,7 +196,7 @@ async function doLogin() {
       setLoading('login-btn', false);
       return;
     }
-    window.valcrown.onboardComplete({
+    window.vc.onboardComplete({
       accessToken:  data.accessToken,
       refreshToken: data.refreshToken,
       user:         data.user,
@@ -235,7 +235,7 @@ async function doRegister() {
       showSuccess('🎉 Account created! 3-day free trial activated. Launching ValCrown...');
     }
     setTimeout(function() {
-      window.valcrown.onboardComplete({
+      window.vc.onboardComplete({
         accessToken:  data.accessToken  || 'GUEST',
         refreshToken: data.refreshToken || '',
         user:         data.user         || { fullName: name, email: email },
@@ -249,7 +249,7 @@ async function doRegister() {
 }
 
 function continueAsGuest() {
-  window.valcrown.onboardComplete({
+  window.vc.onboardComplete({
     accessToken:  'GUEST',
     refreshToken: '',
     user:         { fullName: 'Guest', email: 'guest@valcrown.com', role: 'guest' },

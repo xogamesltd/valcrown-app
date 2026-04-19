@@ -1,80 +1,67 @@
 'use strict';
-
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('valcrown', {
-  // Window
-  minimize:          () => ipcRenderer.send('window-minimize'),
-  maximize:          () => ipcRenderer.send('window-maximize'),
-  close:             () => ipcRenderer.send('window-close'),
-  closeOnboard:      () => ipcRenderer.send('window-close-onboard'),
+contextBridge.exposeInMainWorld('vc', {
+  // Window controls
+  minimize:     () => ipcRenderer.send('win-min'),
+  maximize:     () => ipcRenderer.send('win-max'),
+  hide:         () => ipcRenderer.send('win-hide'),
+  closeOnboard: () => ipcRenderer.send('ob-close'),
 
-  // Storage
+  // Store
   store: {
-    get:    (key)        => ipcRenderer.invoke('store-get', key),
-    set:    (key, value) => ipcRenderer.invoke('store-set', key, value),
-    delete: (key)        => ipcRenderer.invoke('store-delete', key),
-    clear:  ()           => ipcRenderer.invoke('store-clear'),
+    get:    (k)   => ipcRenderer.invoke('s-get', k),
+    set:    (k,v) => ipcRenderer.invoke('s-set', k, v),
+    clear:  ()    => ipcRenderer.invoke('s-clear'),
   },
 
   // Auth
-  onboardComplete: (data) => ipcRenderer.send('onboard-complete', data),
-  logout:          ()     => ipcRenderer.send('logout'),
+  login:  (d) => ipcRenderer.send('auth-login', d),
+  logout: ()  => ipcRenderer.send('auth-logout'),
 
-  // System
-  getApiUrl:        () => ipcRenderer.invoke('get-api-url'),
-  getVersion:       () => ipcRenderer.invoke('get-version'),
-  getSystemInfo:    () => ipcRenderer.invoke('get-system-info'),
-  getCpuUsage:      () => ipcRenderer.invoke('get-cpu-usage'),
-  getRamUsage:      () => ipcRenderer.invoke('get-ram-usage'),
+  // System info
+  sysInfo:  () => ipcRenderer.invoke('sys-info'),
+  cpuUsage: () => ipcRenderer.invoke('cpu-usage'),
+  ramUsage: () => ipcRenderer.invoke('ram-usage'),
+  version:  () => ipcRenderer.invoke('app-version'),
 
   // Processes
-  getProcesses:     () => ipcRenderer.invoke('get-processes'),
-  killProcess:      (pid) => ipcRenderer.invoke('kill-process', pid),
-  cleanRam:         () => ipcRenderer.invoke('clean-ram'),
+  getProcs:   () => ipcRenderer.invoke('get-procs'),
+  killProc:   (p) => ipcRenderer.invoke('kill-proc', p),
+  cleanRam:   () => ipcRenderer.invoke('clean-ram'),
 
-  // Anti-cheat — BOTH names work
-  checkAntiCheat:    () => ipcRenderer.invoke('check-anticheat'),
-  checkAntiCheatSvc: () => ipcRenderer.invoke('check-anticheat'),
+  // Boost engine
+  boost:       (n, m) => ipcRenderer.invoke('boost', n, m),
+  revert:      () => ipcRenderer.invoke('revert'),
+  boostActive: () => ipcRenderer.invoke('boost-active'),
 
-  // Network
-  pingHost:         (host) => ipcRenderer.invoke('ping-host', host),
-  getPing:          () => ipcRenderer.invoke('ping-host', '8.8.8.8'),
-  flushDns:         () => ipcRenderer.invoke('flush-dns'),
-  optimizeTcp:      () => ipcRenderer.invoke('optimize-tcp'),
-  setDns:           (p, s) => ipcRenderer.invoke('set-dns', p, s),
+  // Network engine
+  ping:        (h) => ipcRenderer.invoke('ping', h),
+  flushDns:    () => ipcRenderer.invoke('flush-dns'),
+  tcpOpt:      () => ipcRenderer.invoke('tcp-opt'),
+  setDns:      (p,s) => ipcRenderer.invoke('set-dns', p, s),
 
-  // Boost
-  applyBoost:       (app, mode) => ipcRenderer.invoke('apply-boost', app, mode),
-  revertBoost:      () => ipcRenderer.invoke('revert-boost'),
-  boostIsActive:    () => ipcRenderer.invoke('boost-isactive'),
+  // Anti-cheat
+  acCheck: () => ipcRenderer.invoke('ac-check'),
 
   // Startup
-  setStartup:       (e) => ipcRenderer.invoke('set-startup', e),
-  getStartup:       () => ipcRenderer.invoke('get-startup'),
-  getStartupEnabled:() => ipcRenderer.invoke('get-startup'),
+  setStartup: (e) => ipcRenderer.invoke('set-startup', e),
+  getStartup: () => ipcRenderer.invoke('get-startup'),
 
-  // Game detection
-  getCurrentGame:      () => ipcRenderer.invoke('get-current-game'),
-  getSessionHistory:   () => ipcRenderer.invoke('get-session-history'),
-  getSteamGames:       () => ipcRenderer.invoke('get-steam-games'),
-  checkForUpdates:     () => ipcRenderer.invoke('check-for-updates'),
-  onGameDetected:      (cb) => ipcRenderer.on('game-detected', (_, g) => cb(g)),
-  onGameEnded:         (cb) => ipcRenderer.on('game-ended',    (_, s) => cb(s)),
-  onSessionTick:       (cb) => ipcRenderer.on('session-tick',  (_, t) => cb(t)),
+  // Games
+  currentGame:  () => ipcRenderer.invoke('current-game'),
+  sessions:     () => ipcRenderer.invoke('sessions'),
+  steamGames:   () => ipcRenderer.invoke('steam-games'),
+  pickApp:      () => ipcRenderer.invoke('pick-app'),
 
-  // App selector
-  selectApp:           () => ipcRenderer.invoke('select-app'),
-
-  // Guest mode
-  isGuest:             () => ipcRenderer.invoke('is-guest'),
-
-  // Device
-  getDeviceVid:        () => ipcRenderer.invoke('get-device-vid'),
-  getOsInfo:           () => ipcRenderer.invoke('get-os-info'),
+  // Events from main
+  onGame:    (cb) => ipcRenderer.on('ev-game',    (_, d) => cb(d)),
+  onEnd:     (cb) => ipcRenderer.on('ev-end',     (_, d) => cb(d)),
+  onTick:    (cb) => ipcRenderer.on('ev-tick',    (_, d) => cb(d)),
+  onUpdate:  (cb) => ipcRenderer.on('ev-update',  (_, d) => cb(d)),
 
   // Misc
-  openExternal:        (url) => ipcRenderer.send('open-external', url),
-  notify:              (title, body) => ipcRenderer.send('show-notification', { title, body }),
-  updateTray:          (game) => ipcRenderer.send('update-tray', game),
+  isGuest:    () => ipcRenderer.invoke('is-guest'),
+  openUrl:    (u) => ipcRenderer.send('open-url', u),
+  notify:     (t,b) => ipcRenderer.send('notify', t, b),
 });
